@@ -17,6 +17,7 @@ import Marketplace from './components/Marketplace';
 import ProducerDashboard from './components/ProducerDashboard';
 import GateScanner from './components/GateScanner';
 import CustomerSupport from './components/CustomerSupport';
+import DatabaseSyncStatus from './components/DatabaseSyncStatus';
 
 export default function App() {
   const [user, setUser] = useState<UserProfile | null>(() => {
@@ -196,6 +197,9 @@ export default function App() {
 
       {/* MAIN CONTAINER FRAME */}
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-8 md:px-8 relative z-10">
+        {/* DATABASE SYNC STATUS & DIAGNOSTICS */}
+        <DatabaseSyncStatus />
+
         {/* VIEW ROUTER */}
         {activeTab === 'marketplace' && (
           <Marketplace 
