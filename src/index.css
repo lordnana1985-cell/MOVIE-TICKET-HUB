@@ -1,0 +1,96 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  /* Geometric Balance Theme-specific Colors */
+  --color-gold-light: #fde047; /* amber-300 */
+  --color-gold: #fbbf24;       /* amber-400 */
+  --color-gold-dark: #f59e0b;  /* amber-500 */
+  --color-sky-light: #7dd3fc;  /* sky-300 */
+  --color-sky-deep: #0ea5e9;   /* sky-500 */
+}
+
+/* Custom CSS Styles */
+body {
+  font-family: var(--font-sans);
+  background-color: #020617; /* Slate-950 for cinematic contrast */
+  color: #f3f4f6;
+  overflow-x: hidden;
+}
+
+/* Custom Glassmorphism Classes for outstanding polished feel */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel-light {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.glass-panel-gold {
+  background: rgba(212, 175, 55, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.glass-panel-sky {
+  background: rgba(14, 165, 233, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(14, 165, 233, 0.2);
+}
+
+.gold-glow {
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.15);
+}
+
+.sky-glow {
+  box-shadow: 0 0 25px rgba(14, 165, 233, 0.2);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #090d16; /* Deep dark slate for maximum contrast */
+  border-left: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(245, 158, 11, 0.7); /* Deep gold (gold-dark) with 70% opacity */
+  border-radius: 9999px;
+  border: 2px solid #090d16; /* Creates a clean gap effect */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(251, 191, 36, 0.95); /* Bright premium glowing gold on hover */
+}
+
+/* Firefox scrollbar support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(245, 158, 11, 0.7) #090d16;
+}
+
+/* Custom Hide Scrollbar */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
