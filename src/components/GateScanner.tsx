@@ -191,13 +191,13 @@ export default function GateScanner({ user }: GateScannerProps) {
       {/* HEADER */}
       <div>
         <span className="text-xs font-mono tracking-widest text-sky-light font-semibold uppercase">
-          Cinema Access Control System
+          Event Access Control System
         </span>
         <h2 className="font-display text-3xl font-extrabold tracking-tight text-white mt-1">
           Gate <span className="bg-gradient-to-r from-gold-light via-gold to-gold-dark bg-clip-text text-transparent">Gatekeeper</span>
         </h2>
         <p className="text-sm text-gray-400 mt-1">
-          Verify and authenticate movie premier tickets at the cinema gate entrance. Double-entry protection secured.
+          Verify and authenticate event tickets at the entrance gate. Double-entry protection secured.
         </p>
       </div>
 

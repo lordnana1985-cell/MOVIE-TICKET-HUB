@@ -1,4 +1,4 @@
-export type UserRole = 'producer' | 'buyer';
+export type UserRole = 'producer' | 'buyer' | 'admin';
 
 export interface UserProfile {
   id: string;
@@ -29,6 +29,8 @@ export interface MovieTicket {
   availableQuantity: number;
   coverUrl: string;
   createdAt: string;
+  isLocalOnly?: boolean;
+  category?: 'movie' | 'music' | 'beauty' | 'campus' | 'other';
 }
 
 export interface TicketPurchase {

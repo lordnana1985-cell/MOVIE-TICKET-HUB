@@ -1,12 +1,13 @@
+import { useState } from 'react';
 import { Film, User, LogOut, LayoutDashboard, Store, KeyRound } from 'lucide-react';
 // @ts-ignore
-import logoUrl from '../assets/images/movie_ticket_hub_logo_new_1783537722922.jpg';
+import logoUrl from '../assets/images/eth_logo_sharp_1783889932234.jpg';
 import { UserProfile } from '../types';
 
 interface HeaderProps {
   user: UserProfile | null;
-  activeTab: 'marketplace' | 'producer_dashboard' | 'gate_auth' | 'auth';
-  setActiveTab: (tab: 'marketplace' | 'producer_dashboard' | 'gate_auth' | 'auth') => void;
+  activeTab: 'marketplace' | 'producer_dashboard' | 'gate_auth' | 'admin_portal' | 'auth';
+  setActiveTab: (tab: 'marketplace' | 'producer_dashboard' | 'gate_auth' | 'admin_portal' | 'auth') => void;
   onLogout: () => void;
   onOpenAuth: (role: 'producer' | 'buyer') => void;
 }
@@ -18,35 +19,47 @@ export default function Header({
   onLogout,
   onOpenAuth
 }: HeaderProps) {
+  const [logoClicks, setLogoClicks] = useState(0);
+
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 px-4 md:px-8 bg-[#030712]/90 backdrop-blur-md flex flex-col justify-center py-4 md:py-3">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-2">
         {/* LOGO & BRANDING */}
         <div 
           onClick={() => {
-            if (user) {
-              setActiveTab(user.role === 'producer' ? 'producer_dashboard' : 'marketplace');
+            const newClicks = logoClicks + 1;
+            setLogoClicks(newClicks);
+            if (newClicks >= 5) {
+              const currentVal = localStorage.getItem('mt_hub_show_admin_tab') === 'true';
+              const nextState = !currentVal;
+              localStorage.setItem('mt_hub_show_admin_tab', String(nextState));
+              window.dispatchEvent(new Event('mt_hub_toggle_admin_tab'));
+              setLogoClicks(0);
             } else {
-              setActiveTab('auth');
+              if (user) {
+                setActiveTab(user.role === 'admin' ? 'admin_portal' : user.role === 'producer' ? 'producer_dashboard' : 'marketplace');
+              } else {
+                setActiveTab('auth');
+              }
             }
           }} 
           className="flex cursor-pointer items-center gap-2 sm:gap-3 transition-all hover:scale-[1.02]"
           id="brand-logo-container"
         >
-          <div className="relative h-14 w-14 sm:h-16 sm:w-16 md:h-20 md:w-20 overflow-hidden rounded-lg border-2 border-gold bg-gradient-to-tr from-gold to-gold-dark p-0.5 shadow-[0_0_15px_rgba(251,191,36,0.4)]">
+          <div className="relative h-28 w-28 sm:h-32 sm:w-32 md:h-40 md:w-40 overflow-hidden rounded-lg border-2 border-gold bg-gradient-to-tr from-gold to-gold-dark p-0.5 shadow-[0_0_15px_rgba(251,191,36,0.4)]">
             <img 
               src={logoUrl} 
-              alt="Movie Ticket Hub Logo" 
+              alt="ETH Logo" 
               className="h-full w-full object-cover rounded-md"
               referrerPolicy="no-referrer"
             />
           </div>
           <div>
-            <h1 className="font-display text-sm sm:text-lg md:text-xl font-black tracking-tighter text-white">
-              MOVIE TICKET <span className="text-gold">HUB</span>
+            <h1 className="font-display text-xl sm:text-3xl md:text-4xl font-black tracking-tighter text-white">
+              ETH <span className="text-gold">(EVENT TICKET HUB)</span>
             </h1>
-            <p className="text-[8px] sm:text-[9px] font-mono tracking-widest text-sky-light/60 uppercase">
-              Premier Cinema Access
+            <p className="text-[10px] sm:text-xs md:text-sm font-mono tracking-widest text-sky-light/60 uppercase mt-1">
+              Multi-Genre Event Access
             </p>
           </div>
         </div>
@@ -81,7 +94,7 @@ export default function Header({
                   id="nav-dashboard-btn"
                 >
                   <LayoutDashboard className="h-4 w-4" />
-                  Producer Dashboard
+                  Event Organiser Dashboard
                 </button>
 
                 <button
@@ -95,6 +108,36 @@ export default function Header({
                 >
                   <KeyRound className="h-4 w-4" />
                   Gate Gatekeeper
+                </button>
+              </>
+            )}
+
+            {user.role === 'admin' && (
+              <>
+                <button
+                  onClick={() => setActiveTab('admin_portal')}
+                  className={`flex items-center gap-2 py-1 transition-all ${
+                    activeTab === 'admin_portal'
+                      ? 'text-white border-b-2 border-rose-500 font-bold'
+                      : 'text-sky-100/70 hover:text-white'
+                  }`}
+                  id="nav-admin-portal-btn"
+                >
+                  <LayoutDashboard className="h-4 w-4 text-rose-500" />
+                  Admin Portal
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('marketplace')}
+                  className={`flex items-center gap-2 py-1 transition-all ${
+                    activeTab === 'marketplace'
+                      ? 'text-white border-b-2 border-gold font-bold'
+                      : 'text-sky-100/70 hover:text-white'
+                  }`}
+                  id="nav-marketplace-btn"
+                >
+                  <Store className="h-4 w-4" />
+                  Marketplace
                 </button>
               </>
             )}
@@ -207,6 +250,36 @@ export default function Header({
               >
                 <KeyRound className="h-3.5 w-3.5" />
                 Gate Gatekeeper
+              </button>
+            </>
+          )}
+
+          {user.role === 'admin' && (
+            <>
+              <button
+                onClick={() => setActiveTab('admin_portal')}
+                className={`flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                  activeTab === 'admin_portal'
+                    ? 'bg-rose-600 text-white font-semibold'
+                    : 'text-gray-300 bg-white/5'
+                }`}
+                id="mobile-nav-admin"
+              >
+                <LayoutDashboard className="h-3.5 w-3.5" />
+                Admin Portal
+              </button>
+
+              <button
+                onClick={() => setActiveTab('marketplace')}
+                className={`flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                  activeTab === 'marketplace'
+                    ? 'bg-sky-deep text-white'
+                    : 'text-gray-300 bg-white/5'
+                }`}
+                id="mobile-nav-market"
+              >
+                <Store className="h-3.5 w-3.5" />
+                Marketplace
               </button>
             </>
           )}

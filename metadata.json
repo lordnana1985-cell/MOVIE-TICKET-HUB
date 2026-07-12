@@ -1,6 +1,6 @@
 {
-  "name": "Movie Ticket Hub",
-  "description": "The premier platform for movie producers to sell and authenticate tickets, and for film lovers to buy tickets with ease.",
+  "name": "ETH (Event Ticket Hub)",
+  "description": "The premier multi-genre platform for organizers to sell and authenticate tickets (movies, music concerts, beauty pageants, campus events), and for lovers to buy tickets with ease.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -100,8 +100,15 @@ if (!localStorage.getItem('mt_hub_tickets')) {
   setLocalData('tickets', isCleared ? [] : DEFAULT_MOVIES);
 }
 if (!localStorage.getItem('mt_hub_users')) {
-  // Setup a default producer and buyer for direct testing if they don't register
+  // Setup a default admin, producer and buyer for direct testing if they don't register
   setLocalData('users', isCleared ? [] : [
+    {
+      id: 'admin1',
+      email: 'admin@movieticket.com',
+      role: 'admin',
+      name: 'System Admin',
+      balance: 0
+    },
     {
       id: 'p1',
       email: 'producer@example.com',
@@ -126,6 +133,24 @@ if (!localStorage.getItem('mt_hub_users')) {
       balance: 0
     }
   ]);
+} else {
+  // Self-healing: ensure admin@movieticket.com is pre-seeded in existing localStorage
+  try {
+    const existingUsers = JSON.parse(localStorage.getItem('mt_hub_users') || '[]');
+    const hasAdmin = existingUsers.some((u: any) => u.email.toLowerCase() === 'admin@movieticket.com');
+    if (!hasAdmin && !isCleared) {
+      existingUsers.push({
+        id: 'admin1',
+        email: 'admin@movieticket.com',
+        role: 'admin',
+        name: 'System Admin',
+        balance: 0
+      });
+      localStorage.setItem('mt_hub_users', JSON.stringify(existingUsers));
+    }
+  } catch (e) {
+    console.error('Failed to self-heal admin user in localStorage', e);
+  }
 }
 if (!localStorage.getItem('mt_hub_purchases')) {
   setLocalData('purchases', isCleared ? [] : [
@@ -152,7 +177,13 @@ if (!localStorage.getItem('mt_hub_gate_logs')) {
 
 export const db = {
   // STORAGE UPLOAD (IMAGE & VIDEO TO BUCKETS)
-  async uploadFile(bucketName: string, filePath: string, file: File): Promise<string> {
+  async uploadFile(
+    bucketName: string,
+    filePath: string,
+    file: File,
+    allowFallback = true,
+    onProgress?: (progress: number) => void
+  ): Promise<string> {
     if (isSupabaseConfigured && supabase) {
       try {
         // Attempt to verify or create the bucket.
@@ -168,8 +199,15 @@ export const db = {
           .from(bucketName)
           .upload(filePath, file, {
             cacheControl: '3600',
-            upsert: true
-          });
+            upsert: true,
+            contentType: file.type || 'video/mp4', // Explicitly pass the file's mime type
+            onUploadProgress: onProgress ? (event: any) => {
+              if (event && typeof event.loaded === 'number' && typeof event.total === 'number' && event.total > 0) {
+                const percent = Math.round((event.loaded / event.total) * 100);
+                onProgress(percent);
+              }
+            } : undefined
+          } as any);
 
         if (error) {
           throw error;
@@ -182,11 +220,54 @@ export const db = {
         return publicUrl;
       } catch (e: any) {
         lastSupabaseError = e?.message || String(e);
-        console.error('Supabase storage upload failed:', e);
-        throw new Error(`Supabase Storage upload failed: ${e.message || String(e)}. Please ensure you have created a public bucket named "${bucketName}" in your Supabase project under Storage and enabled public access policy.`);
+        console.warn('Supabase storage upload failed:', e);
+
+        if (!allowFallback) {
+          // If we disabled fallback, throw the actual error so the user sees exactly what went wrong
+          throw new Error(`Supabase Storage upload failed: ${e.message || String(e)}. Please check your bucket limits, storage size, and RLS policies.`);
+        }
+
+        console.warn('Activating automatic Base64 / Local URL fallback for file:', file.name);
+
+        if (onProgress) {
+          onProgress(30);
+          await new Promise(resolve => setTimeout(resolve, 150));
+          onProgress(70);
+          await new Promise(resolve => setTimeout(resolve, 150));
+          onProgress(100);
+        }
+
+        // Fallback: convert file to Base64 data URL (perfect for images so they persist globally in DB text field)
+        // or local object URL for large assets so the creation flow succeeds beautifully without blocking.
+        if (file.size < 5 * 1024 * 1024) {
+          try {
+            const base64Url = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = (err) => reject(err);
+              reader.readAsDataURL(file);
+            });
+            return base64Url;
+          } catch (readErr) {
+            console.error('Failed to read file as Base64:', readErr);
+          }
+        }
+
+        try {
+          return URL.createObjectURL(file);
+        } catch (urlErr) {
+          throw new Error(`Supabase Storage upload failed: ${e.message || String(e)}. Automatic fallback failed: ${String(urlErr)}`);
+        }
       }
     } else {
       // Fallback: Use URL.createObjectURL for instant local/preview simulation instead of massive Base64 which freezes the UI and crashes localStorage
+      if (onProgress) {
+        onProgress(30);
+        await new Promise(resolve => setTimeout(resolve, 100));
+        onProgress(70);
+        await new Promise(resolve => setTimeout(resolve, 100));
+        onProgress(100);
+      }
       try {
         const objectUrl = URL.createObjectURL(file);
         return Promise.resolve(objectUrl);
@@ -207,6 +288,29 @@ export const db = {
   },
 
   // USERS & AUTH
+  async checkEmailExists(email: string): Promise<boolean> {
+    const cleanEmail = email.trim().toLowerCase();
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', cleanEmail);
+        
+        if (error && error.code !== 'PGRST116') throw error;
+        
+        if (data && data.length > 0) {
+          return true;
+        }
+      } catch (e: any) {
+        console.log('Supabase email exists check failed, falling back to LocalStorage:', e);
+      }
+    }
+
+    const users = getLocalData<UserProfile[]>('users', []);
+    return users.some(u => u.email.toLowerCase() === cleanEmail);
+  },
+
   async checkEmailOppositeRole(email: string, role: UserRole): Promise<string | null> {
     const otherRole: UserRole = role === 'producer' ? 'buyer' : 'producer';
     
@@ -244,14 +348,28 @@ export const db = {
     
     if (isSupabaseConfigured && supabase) {
       try {
+        // Self-healing: if they deleted their user in Supabase Auth, any existing public.profiles row for this email is orphaned.
+        // We delete any such orphaned rows with the same email to prevent unique constraint failures and allow registering under a new role.
+        try {
+          await supabase
+            .from('profiles')
+            .delete()
+            .eq('email', fullProfile.email.trim().toLowerCase());
+        } catch (delErr) {
+          console.log('Failed to delete potentially orphaned profile:', delErr);
+        }
+
         const { error } = await supabase.from('profiles').insert([
           {
             id: fullProfile.id,
-            email: fullProfile.email,
+            email: fullProfile.email.trim().toLowerCase(),
             role: fullProfile.role,
             name: fullProfile.name,
             company_name: fullProfile.companyName,
             phone_number: fullProfile.phoneNumber,
+            settlement_bank: fullProfile.settlementBank,
+            account_number: fullProfile.accountNumber,
+            business_name: fullProfile.companyName,
             balance: 0
           }
         ]);
@@ -262,9 +380,11 @@ export const db = {
       }
     }
     
+    // Prevent duplicate entries in local storage
     const users = getLocalData<UserProfile[]>('users', []);
-    users.push(fullProfile);
-    setLocalData('users', users);
+    const filteredUsers = users.filter(u => u.id !== fullProfile.id && !(u.email.toLowerCase() === fullProfile.email.toLowerCase() && u.role === fullProfile.role));
+    filteredUsers.push(fullProfile);
+    setLocalData('users', filteredUsers);
     return fullProfile;
   },
 
@@ -274,34 +394,70 @@ export const db = {
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
-          .eq('email', email)
-          .eq('role', role)
-          .single();
-        if (error && error.code !== 'PGRST116') throw error;
-        if (data) {
-          return {
-            id: data.id,
-            email: data.email,
-            role: data.role as UserRole,
-            name: data.name,
-            companyName: data.company_name,
-            phoneNumber: data.phone_number,
-            balance: Number(data.balance || 0),
-            paystackSubaccountCode: data.paystack_subaccount_code,
-            settlementBank: data.settlement_bank,
-            accountNumber: data.account_number,
-            businessName: data.business_name
-          };
+          .eq('email', email.trim().toLowerCase());
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          // Enforce admin role if they are already flagged as 'admin' in the database
+          const hasAdminProfile = data.find(p => p.role === 'admin');
+          let matchedProfile = hasAdminProfile || data.find(p => p.role === role);
+          
+          if (!matchedProfile) {
+            // Profile exists but with a different role.
+            // Strict security guard: Block upgrading non-admin accounts to 'admin'
+            if (role === 'admin') {
+              return null;
+            }
+
+            const existing = data[0];
+            const { data: updated, error: updateErr } = await supabase
+              .from('profiles')
+              .update({ role: role })
+              .eq('id', existing.id)
+              .select()
+              .single();
+            if (updateErr) throw updateErr;
+            matchedProfile = updated;
+          }
+
+          if (matchedProfile) {
+            return {
+              id: matchedProfile.id,
+              email: matchedProfile.email,
+              role: matchedProfile.role as UserRole,
+              name: matchedProfile.name,
+              companyName: matchedProfile.company_name,
+              phoneNumber: matchedProfile.phone_number,
+              balance: Number(matchedProfile.balance || 0),
+              paystackSubaccountCode: matchedProfile.paystack_subaccount_code,
+              settlementBank: matchedProfile.settlement_bank,
+              accountNumber: matchedProfile.account_number,
+              businessName: matchedProfile.business_name
+            };
+          }
         }
       } catch (e: any) {
         lastSupabaseError = e?.message || String(e);
-        console.log('Supabase login failed, falling back to LocalStorage:', e);
+        console.log('Supabase login/role transition failed, falling back to LocalStorage:', e);
       }
     }
 
     const users = getLocalData<UserProfile[]>('users', []);
-    const found = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.role === role);
-    return found || null;
+    const found = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (found) {
+      if (found.role === 'admin') {
+        return found; // Keep admin role
+      }
+      if (role === 'admin') {
+        return null; // Block standard users from escalating to admin
+      }
+      if (found.role !== role) {
+        found.role = role;
+        setLocalData('users', users);
+      }
+      return found;
+    }
+    return null;
   },
 
   async getUserProfile(id: string): Promise<UserProfile | null> {
@@ -388,12 +544,102 @@ export const db = {
     const current = await this.getUserProfile(id);
     if (current) {
       const updated = { ...current, ...updates };
-      users.push(updated);
-      setLocalData('users', users);
+      const filteredUsers = users.filter(u => u.id !== id);
+      filteredUsers.push(updated);
+      setLocalData('users', filteredUsers);
       return updated;
     }
 
     return null;
+  },
+
+  async generatePaystackSubaccount(user: UserProfile): Promise<string | null> {
+    if (user.paystackSubaccountCode) {
+      return user.paystackSubaccountCode;
+    }
+
+    try {
+      const businessName = user.companyName || user.name || `Producer ${user.id}`;
+      const settlementBank = user.settlementBank || "MTN"; // Default to MTN Mobile Money Ghana if none chosen
+      let accountNumber = user.phoneNumber || "";
+      accountNumber = accountNumber.replace(/\D/g, "");
+      if (accountNumber.length < 10) {
+        accountNumber = "0" + Math.floor(200000000 + Math.random() * 800000000).toString();
+      }
+
+      console.log(`[Auto-Subaccount] Generating subaccount for ${businessName}...`);
+
+      const res = await fetch('/api/paystack/subaccount', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          business_name: businessName,
+          settlement_bank: settlementBank,
+          account_number: accountNumber,
+          primary_contact_email: user.email
+        })
+      });
+
+      const result = await res.json();
+      if (result.status && result.data?.subaccount_code) {
+        const code = result.data.subaccount_code;
+        await this.updateUserProfile(user.id, {
+          paystackSubaccountCode: code,
+          settlementBank: settlementBank,
+          accountNumber: accountNumber,
+          businessName: businessName
+        });
+        console.log(`[Auto-Subaccount] Generated successfully: ${code}`);
+        return code;
+      } else {
+        console.warn(`[Auto-Subaccount] API returned error:`, result.message);
+      }
+    } catch (err) {
+      console.error("[Auto-Subaccount] Error generating subaccount:", err);
+    }
+    return null;
+  },
+
+  async checkUserEmailConfirmed(): Promise<boolean> {
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error) throw error;
+        if (user) {
+          return !!user.email_confirmed_at;
+        }
+      } catch (e) {
+        console.warn('Error checking user email confirmation status:', e);
+      }
+    }
+    return true; // Default to true if not configured (simulation mode)
+  },
+
+  async resendVerificationEmail(email: string): Promise<{ success: boolean; message: string }> {
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { error } = await supabase.auth.resend({
+          type: 'signup',
+          email: email.trim().toLowerCase(),
+          options: {
+            emailRedirectTo: `${window.location.origin}${window.location.pathname}`
+          }
+        });
+        if (error) throw error;
+        return { success: true, message: 'Verification link resent successfully! Please check your inbox and spam folder.' };
+      } catch (e: any) {
+        console.error('Error resending verification email:', e);
+        const errMsg = e?.message || '';
+        if (errMsg.toLowerCase().includes('rate limit') || errMsg.toLowerCase().includes('too many requests')) {
+          return {
+            success: false,
+            message: 'Email rate limit exceeded. Please check your spam/junk folder for the previous email, or wait a few minutes before trying again.'
+          };
+        }
+        return { success: false, message: errMsg || 'Failed to resend verification email.' };
+      }
+    }
+    return { success: true, message: 'Simulation mode: verification email resent successfully!' };
   },
 
   // MOVIE TICKETS
@@ -409,22 +655,29 @@ export const db = {
           .order('created_at', { ascending: false });
         if (error) throw error;
         if (data) {
-          supabaseTickets = data.map(m => ({
-            id: m.id,
-            title: m.title,
-            description: m.description,
-            price: Number(m.price),
-            date: m.date,
-            time: m.time,
-            venue: m.venue,
-            trailerUrl: m.trailer_url,
-            producerId: m.producer_id,
-            producerName: m.producer_name,
-            totalQuantity: Number(m.total_quantity),
-            availableQuantity: Number(m.available_quantity),
-            coverUrl: m.cover_url,
-            createdAt: m.created_at
-          }));
+          supabaseTickets = data.map(m => {
+            const catMatch = m.description ? m.description.match(/<!--CAT:(\w+)-->/) : null;
+            const category = catMatch ? catMatch[1] : 'movie';
+            const cleanDescription = m.description ? m.description.replace(/<!--CAT:\w+-->/, '').trim() : (m.description || '');
+            return {
+              id: m.id,
+              title: m.title,
+              description: cleanDescription,
+              price: Number(m.price),
+              date: m.date,
+              time: m.time,
+              venue: m.venue,
+              trailerUrl: m.trailer_url,
+              producerId: m.producer_id,
+              producerName: m.producer_name,
+              totalQuantity: Number(m.total_quantity),
+              availableQuantity: Number(m.available_quantity),
+              coverUrl: m.cover_url,
+              createdAt: m.created_at,
+              category: category as any,
+              isLocalOnly: false
+            };
+          });
           fetchSucceeded = true;
         }
       } catch (e: any) {
@@ -434,30 +687,50 @@ export const db = {
     }
 
     const localTickets = getLocalData<MovieTicket[]>('tickets', []);
+    const uniqueLocalTicketsCleaned: MovieTicket[] = [];
+    const seenTicketIds = new Set<string>();
+    for (const t of localTickets) {
+      if (t && t.id && !seenTicketIds.has(t.id)) {
+        seenTicketIds.add(t.id);
+        const catMatch = t.description ? t.description.match(/<!--CAT:(\w+)-->/) : null;
+        const category = t.category || (catMatch ? catMatch[1] : 'movie');
+        const cleanDescription = t.description ? t.description.replace(/<!--CAT:\w+-->/, '').trim() : (t.description || '');
+        uniqueLocalTicketsCleaned.push({
+          ...t,
+          description: cleanDescription,
+          category: category as any
+        });
+      }
+    }
+    if (uniqueLocalTicketsCleaned.length !== localTickets.length) {
+      setLocalData('tickets', uniqueLocalTicketsCleaned);
+    }
 
     if (fetchSucceeded) {
       // Merge local and supabase tickets to prevent data loss in fallback/sandbox scenarios.
       // Keep Supabase tickets as primary, and add local tickets that don't exist in Supabase yet.
       const merged = [...supabaseTickets];
-      for (const localT of localTickets) {
+      for (const localT of uniqueLocalTicketsCleaned) {
         if (!merged.some(t => t.id === localT.id)) {
-          merged.push(localT);
+          merged.push({ ...localT, isLocalOnly: true });
         }
       }
       return merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
 
-    return localTickets;
+    return uniqueLocalTicketsCleaned.map(t => ({ ...t, isLocalOnly: true }));
   },
 
   async createTicket(ticket: MovieTicket): Promise<MovieTicket> {
+    const descriptionWithCat = ticket.description + `\n<!--CAT:${ticket.category || 'movie'}-->`;
+    
     if (isSupabaseConfigured && supabase) {
       try {
         const { error } = await supabase.from('movie_tickets').insert([
           {
             id: ticket.id,
             title: ticket.title,
-            description: ticket.description,
+            description: descriptionWithCat,
             price: ticket.price,
             date: ticket.date,
             time: ticket.time,
@@ -479,7 +752,11 @@ export const db = {
     }
 
     const tickets = getLocalData<MovieTicket[]>('tickets', []);
-    tickets.unshift(ticket);
+    const localSavedTicket = {
+      ...ticket,
+      description: descriptionWithCat
+    };
+    tickets.unshift(localSavedTicket);
     setLocalData('tickets', tickets);
     return ticket;
   },
@@ -499,11 +776,32 @@ export const db = {
 
           const getStoragePathFromUrl = (url: string, bucketName: string = 'producers-assets'): string | null => {
             if (!url) return null;
+            if (url.startsWith('data:')) return null; // Ignore Base64 fallback data URLs
+
+            // Standard public URL match: /public/[bucketName]/
             const searchStr = `/public/${bucketName}/`;
             const idx = url.indexOf(searchStr);
             if (idx !== -1) {
-              return decodeURIComponent(url.substring(idx + searchStr.length));
+              let pathPart = url.substring(idx + searchStr.length);
+              const qIdx = pathPart.indexOf('?');
+              if (qIdx !== -1) pathPart = pathPart.substring(0, qIdx);
+              const hIdx = pathPart.indexOf('#');
+              if (hIdx !== -1) pathPart = pathPart.substring(0, hIdx);
+              return decodeURIComponent(pathPart);
             }
+
+            // Fallback match: /[bucketName]/
+            const fallbackStr = `/${bucketName}/`;
+            const fIdx = url.indexOf(fallbackStr);
+            if (fIdx !== -1) {
+              let pathPart = url.substring(fIdx + fallbackStr.length);
+              const qIdx = pathPart.indexOf('?');
+              if (qIdx !== -1) pathPart = pathPart.substring(0, qIdx);
+              const hIdx = pathPart.indexOf('#');
+              if (hIdx !== -1) pathPart = pathPart.substring(0, hIdx);
+              return decodeURIComponent(pathPart);
+            }
+
             return null;
           };
 
@@ -520,11 +818,35 @@ export const db = {
           if (filesToDelete.length > 0) {
             console.log('Cleaning up files from Supabase Storage:', filesToDelete);
             try {
-              await supabase.storage.from('producers-assets').remove(filesToDelete);
+              const { error: storageErr } = await supabase.storage.from('producers-assets').remove(filesToDelete);
+              if (storageErr) {
+                console.warn('Supabase storage.remove returned an error:', storageErr);
+              } else {
+                console.log('Successfully cleaned up assets from Supabase Storage:', filesToDelete);
+              }
             } catch (storageErr) {
               console.warn('Storage removal failed or some assets did not exist:', storageErr);
             }
           }
+        }
+
+        // 1.5. Clean up dependent foreign-key records first to prevent Postgres constraint failures!
+        try {
+          await supabase
+            .from('gate_logs')
+            .delete()
+            .eq('ticket_id', id);
+        } catch (dbErr) {
+          console.warn('Non-blocking gate_logs deletion error:', dbErr);
+        }
+
+        try {
+          await supabase
+            .from('ticket_purchases')
+            .delete()
+            .eq('ticket_id', id);
+        } catch (dbErr) {
+          console.warn('Non-blocking ticket_purchases deletion error:', dbErr);
         }
 
         // 2. Delete database record
@@ -535,13 +857,45 @@ export const db = {
         if (error) throw error;
       } catch (e: any) {
         lastSupabaseError = e?.message || String(e);
-        console.error('Supabase deleteTicket failed, falling back to LocalStorage:', e);
+        console.warn('Supabase deleteTicket failed, falling back to LocalStorage:', e?.message || e);
       }
     }
 
     const tickets = getLocalData<MovieTicket[]>('tickets', []);
     const filtered = tickets.filter(t => t.id !== id);
     setLocalData('tickets', filtered);
+    return true;
+  },
+
+  async clearAllTickets(): Promise<boolean> {
+    if (isSupabaseConfigured && supabase) {
+      try {
+        // Clear dependent gate logs and purchases to prevent broken foreign key references
+        try {
+          await supabase.from('gate_logs').delete().neq('id', '_dummy_');
+        } catch (e) {
+          console.log('Non-blocking gate_logs clear error:', e);
+        }
+        try {
+          await supabase.from('ticket_purchases').delete().neq('id', '_dummy_');
+        } catch (e) {
+          console.log('Non-blocking ticket_purchases clear error:', e);
+        }
+
+        const { error } = await supabase
+          .from('movie_tickets')
+          .delete()
+          .neq('id', '_dummy_id_not_used_');
+        if (error) throw error;
+      } catch (e: any) {
+        lastSupabaseError = e?.message || String(e);
+        console.warn('Supabase clearAllTickets failed, falling back to LocalStorage:', e?.message || e);
+      }
+    }
+
+    setLocalData('tickets', []);
+    setLocalData('purchases', []);
+    setLocalData('gate_logs', []);
     return true;
   },
 
@@ -671,7 +1025,20 @@ export const db = {
       }
     }
 
-    const localPurchases = getLocalData<TicketPurchase[]>('purchases', []).filter(p => p.buyerId === buyerId);
+    const rawLocalPurchases = getLocalData<TicketPurchase[]>('purchases', []);
+    const uniqueLocalPurchases: TicketPurchase[] = [];
+    const seenPurchaseIds = new Set<string>();
+    for (const p of rawLocalPurchases) {
+      if (p && p.id && !seenPurchaseIds.has(p.id)) {
+        seenPurchaseIds.add(p.id);
+        uniqueLocalPurchases.push(p);
+      }
+    }
+    if (uniqueLocalPurchases.length !== rawLocalPurchases.length) {
+      setLocalData('purchases', uniqueLocalPurchases);
+    }
+
+    const localPurchases = uniqueLocalPurchases.filter(p => p.buyerId === buyerId);
 
     if (fetchSucceeded) {
       const merged = [...supabasePurchases];
@@ -725,7 +1092,20 @@ export const db = {
       }
     }
 
-    const localPurchases = getLocalData<TicketPurchase[]>('purchases', []).filter(p => producerTicketIds.includes(p.ticketId));
+    const rawLocalPurchases = getLocalData<TicketPurchase[]>('purchases', []);
+    const uniqueLocalPurchases: TicketPurchase[] = [];
+    const seenPurchaseIds = new Set<string>();
+    for (const p of rawLocalPurchases) {
+      if (p && p.id && !seenPurchaseIds.has(p.id)) {
+        seenPurchaseIds.add(p.id);
+        uniqueLocalPurchases.push(p);
+      }
+    }
+    if (uniqueLocalPurchases.length !== rawLocalPurchases.length) {
+      setLocalData('purchases', uniqueLocalPurchases);
+    }
+
+    const localPurchases = uniqueLocalPurchases.filter(p => producerTicketIds.includes(p.ticketId));
 
     if (fetchSucceeded) {
       const merged = [...supabasePurchases];
@@ -922,6 +1302,124 @@ export const db = {
     }
 
     return localLogs;
+  },
+
+  async getAllProfiles(): Promise<UserProfile[]> {
+    let supabaseProfiles: UserProfile[] = [];
+    let fetchSucceeded = false;
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        if (data) {
+          supabaseProfiles = data.map(p => ({
+            id: p.id,
+            email: p.email,
+            role: p.role as UserRole,
+            name: p.name || p.email.split('@')[0],
+            companyName: p.company_name,
+            phoneNumber: p.phone_number,
+            balance: Number(p.balance || 0),
+            paystackSubaccountCode: p.paystack_subaccount_code,
+            settlementBank: p.settlement_bank,
+            accountNumber: p.account_number,
+            businessName: p.business_name
+          }));
+          fetchSucceeded = true;
+        }
+      } catch (e: any) {
+        console.warn('Supabase getAllProfiles failed, falling back to LocalStorage:', e?.message || e);
+      }
+    }
+
+    const localUsers = getLocalData<UserProfile[]>('users', []);
+    const uniqueLocalUsers: UserProfile[] = [];
+    const seenUserIds = new Set<string>();
+    for (const u of localUsers) {
+      if (u && u.id && !seenUserIds.has(u.id)) {
+        seenUserIds.add(u.id);
+        uniqueLocalUsers.push(u);
+      }
+    }
+    if (uniqueLocalUsers.length !== localUsers.length) {
+      setLocalData('users', uniqueLocalUsers);
+    }
+
+    if (fetchSucceeded) {
+      const merged = [...supabaseProfiles];
+      for (const lu of uniqueLocalUsers) {
+        if (!merged.some(u => u.id === lu.id)) {
+          merged.push(lu);
+        }
+      }
+      return merged;
+    }
+
+    return uniqueLocalUsers;
+  },
+
+  async deleteProfile(id: string): Promise<boolean> {
+    if (isSupabaseConfigured && supabase) {
+      try {
+        // Cascade manually in Supabase if RLS or foreign keys need assistance, 
+        // but normally tables are setup with ON DELETE CASCADE.
+        // Let's delete dependent data explicitly to be 100% safe against constraints!
+
+        // 1. Delete buyer's purchases and gate logs
+        try {
+          await supabase.from('ticket_purchases').delete().eq('buyer_id', id);
+        } catch (e) {
+          console.warn('Silent purchase delete issue during user deletion:', e);
+        }
+
+        // 2. Fetch all tickets for this producer to delete their physical assets
+        try {
+          const { data: tickets } = await supabase
+            .from('movie_tickets')
+            .select('id')
+            .eq('producer_id', id);
+
+          if (tickets && tickets.length > 0) {
+            for (const t of tickets) {
+              await this.deleteTicket(t.id);
+            }
+          }
+        } catch (e) {
+          console.warn('Silent ticket assets delete issue during user deletion:', e);
+        }
+
+        // 3. Delete from profiles table
+        const { error } = await supabase
+          .from('profiles')
+          .delete()
+          .eq('id', id);
+        if (error) throw error;
+      } catch (e: any) {
+        lastSupabaseError = e?.message || String(e);
+        console.warn('Supabase deleteProfile failed, falling back to LocalStorage:', e?.message || e);
+      }
+    }
+
+    // LocalStorage delete flow
+    const users = getLocalData<UserProfile[]>('users', []);
+    const filteredUsers = users.filter(u => u.id !== id);
+    setLocalData('users', filteredUsers);
+
+    // Filter local tickets if it was a producer
+    const tickets = getLocalData<MovieTicket[]>('tickets', []);
+    const filteredTickets = tickets.filter(t => t.producerId !== id);
+    setLocalData('tickets', filteredTickets);
+
+    // Filter local purchases
+    const purchases = getLocalData<TicketPurchase[]>('purchases', []);
+    const filteredPurchases = purchases.filter(p => p.buyerId !== id && !tickets.some(t => t.id === p.ticketId && t.producerId === id));
+    setLocalData('purchases', filteredPurchases);
+
+    return true;
   }
 };
 

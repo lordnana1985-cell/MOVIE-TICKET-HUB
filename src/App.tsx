@@ -17,7 +17,8 @@ import Marketplace from './components/Marketplace';
 import ProducerDashboard from './components/ProducerDashboard';
 import GateScanner from './components/GateScanner';
 import CustomerSupport from './components/CustomerSupport';
-import DatabaseSyncStatus from './components/DatabaseSyncStatus';
+import PaystackSandbox from './components/PaystackSandbox';
+import AdminPortal from './components/AdminPortal';
 
 export default function App() {
   const [user, setUser] = useState<UserProfile | null>(() => {
@@ -33,13 +34,24 @@ export default function App() {
     return null;
   });
 
-  const [activeTab, setActiveTab] = useState<'marketplace' | 'producer_dashboard' | 'gate_auth' | 'auth'>(() => {
+  // Intercept for Paystack Sandbox redirect window
+  const urlParams = new URLSearchParams(window.location.search);
+  const sandboxRef = urlParams.get('reference');
+  const sandboxAmount = urlParams.get('amount');
+
+  if (sandboxRef) {
+    return <PaystackSandbox reference={sandboxRef} amount={sandboxAmount} />;
+  }
+
+  const [activeTab, setActiveTab] = useState<'marketplace' | 'producer_dashboard' | 'gate_auth' | 'admin_portal' | 'auth'>(() => {
     const savedUser = localStorage.getItem('mt_hub_current_user');
     if (savedUser) {
       try {
         const parsed = JSON.parse(savedUser);
         if (parsed.role === 'producer') {
           return 'producer_dashboard';
+        } else if (parsed.role === 'admin') {
+          return 'admin_portal';
         }
         return 'marketplace';
       } catch (e) {
@@ -49,7 +61,7 @@ export default function App() {
     return 'auth';
   });
 
-  const [authModalRole, setAuthModalRole] = useState<'producer' | 'buyer'>('buyer');
+  const [authModalRole, setAuthModalRole] = useState<'producer' | 'buyer' | 'admin'>('buyer');
   
   // Shared Live States
   const [tickets, setTickets] = useState<MovieTicket[]>([]);
@@ -61,6 +73,22 @@ export default function App() {
     reloadData();
   }, [user?.id]);
 
+  // Real-time listener for secret admin tab toggle
+  useEffect(() => {
+    const handleToggleAdminEvent = () => {
+      const nextState = localStorage.getItem('mt_hub_show_admin_tab') === 'true';
+      if (nextState) {
+        triggerAlert('success', 'Admin Portal Login Option is now VISIBLE on the login screen!');
+      } else {
+        triggerAlert('success', 'Admin Portal Login Option is now HIDDEN from the login screen.');
+      }
+    };
+    window.addEventListener('mt_hub_toggle_admin_tab', handleToggleAdminEvent);
+    return () => {
+      window.removeEventListener('mt_hub_toggle_admin_tab', handleToggleAdminEvent);
+    };
+  }, []);
+
   // Strict role-based navigation enforcement guard
   useEffect(() => {
     if (user) {
@@ -71,6 +99,10 @@ export default function App() {
       } else if (user.role === 'producer') {
         if (activeTab !== 'producer_dashboard' && activeTab !== 'gate_auth') {
           setActiveTab('producer_dashboard');
+        }
+      } else if (user.role === 'admin') {
+        if (activeTab !== 'admin_portal' && activeTab !== 'marketplace') {
+          setActiveTab('admin_portal');
         }
       }
     } else {
@@ -86,6 +118,19 @@ export default function App() {
       setTickets(liveTickets);
 
       if (user) {
+        // Enforce active email verification check if Supabase is configured
+        if (getSupabaseStatus().configured) {
+          const isEmailConfirmed = await db.checkUserEmailConfirmed();
+          if (!isEmailConfirmed) {
+            console.warn("User email not verified on reload. Logging out...");
+            localStorage.removeItem('mt_hub_current_user');
+            setUser(null);
+            setActiveTab('auth');
+            triggerAlert('error', 'Your email is not verified yet. Please check your inbox and verify your email before viewing your dashboard.');
+            return;
+          }
+        }
+
         // Reload user stats/profile balance too
         const updatedProfile = await db.getUserProfile(user.id);
         if (updatedProfile) {
@@ -120,6 +165,8 @@ export default function App() {
     // Redirect producers to their console, buyers stay on market
     if (profile.role === 'producer') {
       setActiveTab('producer_dashboard');
+    } else if (profile.role === 'admin') {
+      setActiveTab('admin_portal');
     } else {
       setActiveTab('marketplace');
     }
@@ -132,7 +179,7 @@ export default function App() {
     setTimeout(() => setAlertMessage(null), 4000);
   };
 
-  const handleNavigationChange = (tab: 'marketplace' | 'producer_dashboard' | 'gate_auth' | 'auth') => {
+  const handleNavigationChange = (tab: 'marketplace' | 'producer_dashboard' | 'gate_auth' | 'admin_portal' | 'auth') => {
     if (!user) {
       setActiveTab('auth');
       triggerAlert('error', 'Authentication required: Please sign in or register first to explore the market.');
@@ -152,11 +199,17 @@ export default function App() {
         setActiveTab('producer_dashboard');
         return;
       }
+    } else if (user.role === 'admin') {
+      if (tab !== 'admin_portal' && tab !== 'marketplace' && tab !== 'auth') {
+        triggerAlert('error', 'Access Blocked: Admins are restricted to Admin Portal and Marketplace.');
+        setActiveTab('admin_portal');
+        return;
+      }
     }
     setActiveTab(tab);
   };
 
-  const openAuthPortal = (role: 'producer' | 'buyer') => {
+  const openAuthPortal = (role: 'producer' | 'buyer' | 'admin') => {
     setAuthModalRole(role);
     setActiveTab('auth');
   };
@@ -197,9 +250,6 @@ export default function App() {
 
       {/* MAIN CONTAINER FRAME */}
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-8 md:px-8 relative z-10">
-        {/* DATABASE SYNC STATUS & DIAGNOSTICS */}
-        <DatabaseSyncStatus />
-
         {/* VIEW ROUTER */}
         {activeTab === 'marketplace' && (
           <Marketplace 
@@ -216,6 +266,14 @@ export default function App() {
             user={user}
             onTicketCreated={reloadData}
             setActiveTab={handleNavigationChange}
+          />
+        )}
+
+        {activeTab === 'admin_portal' && user && user.role === 'admin' && (
+          <AdminPortal 
+            user={user}
+            tickets={tickets}
+            onDataChanged={reloadData}
           />
         )}
 
@@ -250,15 +308,17 @@ export default function App() {
             </div>
           </div>
           <p className="text-xs text-gray-500 font-mono tracking-wider">
-            © 2026 MOVIE TICKET HUB • ALL RIGHTS RESERVED
+            © 2026 EVENT TICKET HUB (ETH) • ALL RIGHTS RESERVED
           </p>
-          <div className="flex justify-center gap-6 text-[10px] font-mono text-gray-400 flex-wrap">
-            <span>SECURED BY PAYSTACK INLINE</span>
-            <span>•</span>
-            <span>SPLIT SYSTEM: 80% PRODUCER / 20% HUB</span>
-            <span>•</span>
-            <span>SUPABASE INTEGRATION CAPABLE</span>
-          </div>
+          {activeTab !== 'auth' && (
+            <div className="flex justify-center gap-6 text-[10px] font-mono text-gray-400 flex-wrap">
+              <span>SECURED BY PAYSTACK INLINE</span>
+              <span>•</span>
+              <span>SPLIT SYSTEM: 80% ORGANISER / 20% HUB</span>
+              <span>•</span>
+              <span>SUPABASE INTEGRATION CAPABLE</span>
+            </div>
+          )}
         </div>
       </footer>
 

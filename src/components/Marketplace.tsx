@@ -29,7 +29,10 @@ import {
   Plus,
   Minus,
   Trash2,
-  ShoppingBag
+  ShoppingBag,
+  Music,
+  Crown,
+  GraduationCap
 } from 'lucide-react';
 import { UserProfile, MovieTicket, TicketPurchase } from '../types';
 
@@ -54,6 +57,7 @@ export default function Marketplace({
   onPurchaseComplete,
   onOpenAuth
 }: MarketplaceProps) {
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [priceFilter, setPriceFilter] = useState<number>(2000);
   const [selectedMovie, setSelectedMovie] = useState<MovieTicket | null>(null);
@@ -71,6 +75,14 @@ export default function Marketplace({
   const [paystackStep, setPaystackStep] = useState<'details' | 'otp' | 'success'>('details');
   const [otpCode, setOtpCode] = useState('');
   const [paymentError, setPaymentError] = useState('');
+
+  const handleClosePaystackCheckout = () => {
+    setPaystackCheckout(false);
+    setPaystackStep('details');
+    setPendingPaystackRef(null);
+    setPaymentError('');
+    setIsInitializingPayment(false);
+  };
 
   // Buyer Passes State
   const [myPasses, setMyPasses] = useState<TicketPurchase[]>([]);
@@ -188,7 +200,7 @@ export default function Marketplace({
     if (!user) {
       setSelectedMovie(null);
       setSelectedTrailer(null);
-      setPaystackCheckout(false);
+      handleClosePaystackCheckout();
       setCart([]);
     }
   }, [user]);
@@ -199,7 +211,8 @@ export default function Marketplace({
                           tkt.venue.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           tkt.producerName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPrice = tkt.price <= priceFilter;
-    return matchesSearch && matchesPrice;
+    const matchesCategory = selectedCategory === 'all' || (tkt.category || 'movie') === selectedCategory;
+    return matchesSearch && matchesPrice && matchesCategory;
   });
 
   const handleProceedToPay = async () => {
@@ -266,10 +279,10 @@ export default function Marketplace({
       const res = await fetch(`/api/paystack/verify/${pendingPaystackRef}`);
       const result = await res.json();
 
-      if (result.status && (result.data?.status === 'success' || result.data?.status === 'abandoned' || result.data?.status === 'failed' || result.data)) {
+      if (result.status && result.data?.status === 'success') {
         await handleConfirmPayment();
       } else {
-        setPaymentError(result.message || 'Payment verification failed. Please try again.');
+        setPaymentError(result.message || 'Payment verification failed. Please complete authorization in the secure window first.');
       }
     } catch (err: any) {
       setPaymentError(err.message || 'Error verifying payment.');
@@ -312,7 +325,7 @@ export default function Marketplace({
       
       setPaystackStep('success');
       setTimeout(() => {
-        setPaystackCheckout(false);
+        handleClosePaystackCheckout();
         setCart([]); // Clear cart upon successful transaction
         onPurchaseComplete();
         loadMyPasses();
@@ -368,8 +381,8 @@ export default function Marketplace({
             </div>
             
             <div className="space-y-1">
-              <h4 className="font-display font-black text-lg text-white tracking-tighter">MOVIE TICKET <span className="text-gold">HUB</span></h4>
-              <p className="text-[9px] text-sky-light/80 font-mono tracking-widest leading-tight">THE ULTIMATE CINEMA LEDGER</p>
+              <h4 className="font-display font-black text-lg text-white tracking-tighter">EVENT TICKET <span className="text-gold">HUB</span></h4>
+              <p className="text-[9px] text-sky-light/80 font-mono tracking-widest leading-tight">THE ULTIMATE EVENT LEDGER</p>
             </div>
           </div>
         </div>
@@ -503,17 +516,51 @@ export default function Marketplace({
         </button>
       </div>
 
+      {/* CATEGORY TABS */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+        {[
+          { id: 'all', name: 'All Events', icon: Sparkles },
+          { id: 'movie', name: 'Movie Premiers', icon: Play },
+          { id: 'music', name: 'Music Shows', icon: Music },
+          { id: 'beauty', name: 'Beauty Pageants', icon: Crown },
+          { id: 'campus', name: 'Campus Shows', icon: GraduationCap },
+          { id: 'other', name: 'Other Events', icon: Ticket }
+        ].map((cat) => {
+          const IconComponent = cat.icon;
+          const isActive = selectedCategory === cat.id;
+          return (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border transition-all duration-300 shrink-0 ${
+                isActive 
+                  ? 'bg-white text-slate-950 border-white shadow-[0_0_15px_rgba(255,255,255,0.2)]' 
+                  : 'bg-black/40 border-white/10 text-gray-400 hover:text-white hover:border-white/20'
+              }`}
+            >
+              <IconComponent className={`h-3.5 w-3.5 ${isActive ? 'text-slate-950' : 'text-gray-400'}`} />
+              <span>{cat.name}</span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* TICKETS MARKETPLACE GRID */}
       <div className="space-y-4">
         <h3 className="font-display text-xl font-bold text-white flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-gold" />
-          Available Premier Screenings
+          {selectedCategory === 'all' ? 'All Live Event Tickets' :
+           selectedCategory === 'movie' ? 'Movie Premier Screenings' :
+           selectedCategory === 'music' ? 'Music Shows & Concerts' :
+           selectedCategory === 'beauty' ? 'Beauty Pageant Shows' :
+           selectedCategory === 'campus' ? 'Campus Events & Student Shows' :
+           'Other Live Shows & Events'}
         </h3>
 
         {filteredTickets.length === 0 ? (
           <div className="rounded-2xl glass-panel p-10 text-center">
             <Tag className="h-8 w-8 text-gray-500 mx-auto mb-2" />
-            <p className="text-gray-400 text-sm">No premieres match your search filters.</p>
+            <p className="text-gray-400 text-sm">No events match your selected category and search filters.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -524,6 +571,28 @@ export default function Marketplace({
               >
                 {/* MOVIE POSTER COVER */}
                 <div className="relative h-56 overflow-hidden rounded-2xl bg-black/60">
+                  {/* CATEGORY FLOATER BADGE */}
+                  <div className="absolute top-3 left-3 z-10">
+                    {(() => {
+                      const cat = tkt.category || 'movie';
+                      const badgeStyles = {
+                        movie: { bg: 'bg-cyan-500/90 text-white', label: 'Movie', icon: Play },
+                        music: { bg: 'bg-fuchsia-500/90 text-white', label: 'Music', icon: Music },
+                        beauty: { bg: 'bg-rose-500/90 text-white', label: 'Pageant', icon: Crown },
+                        campus: { bg: 'bg-emerald-500/90 text-white', label: 'Campus', icon: GraduationCap },
+                        other: { bg: 'bg-indigo-500/90 text-white', label: 'Event', icon: Ticket }
+                      }[cat] || { bg: 'bg-cyan-500/90 text-white', label: 'Movie', icon: Play };
+                      
+                      const IconComp = badgeStyles.icon;
+                      return (
+                        <span className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-black uppercase tracking-wider shadow-lg ${badgeStyles.bg}`}>
+                          <IconComp className="h-2.5 w-2.5" />
+                          {badgeStyles.label}
+                        </span>
+                      );
+                    })()}
+                  </div>
+
                   <img src={tkt.coverUrl} alt={tkt.title} className="w-full h-full object-cover group-hover:scale-105 transition-all duration-500" referrerPolicy="no-referrer" />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
                   
@@ -723,7 +792,7 @@ export default function Marketplace({
                 </div>
               </div>
               <button 
-                onClick={() => setPaystackCheckout(false)}
+                onClick={handleClosePaystackCheckout}
                 className="text-white/80 hover:text-white"
               >
                 <X className="h-4 w-4" />
@@ -732,7 +801,7 @@ export default function Marketplace({
 
             {/* TRANSACTION SUMMARY */}
             <div className="bg-black/30 px-5 py-4 border-b border-white/5 max-h-48 overflow-y-auto no-scrollbar space-y-2">
-              <span className="text-[10px] text-gray-400 block uppercase font-mono">Pay to Movie Ticket Hub</span>
+              <span className="text-[10px] text-gray-400 block uppercase font-mono">Pay to ETH (Event Ticket Hub)</span>
               {cart.map((item) => (
                 <div key={item.ticket.id} className="flex justify-between items-center text-xs">
                   <div className="min-w-0 pr-2">
@@ -772,7 +841,7 @@ export default function Marketplace({
                 <div className="flex gap-3 pt-2">
                   <button
                     type="button"
-                    onClick={() => setPaystackCheckout(false)}
+                    onClick={handleClosePaystackCheckout}
                     className="flex-1 border border-white/10 hover:bg-white/5 py-3 rounded-xl text-xs font-bold text-gray-400 hover:text-white transition-all"
                   >
                     Cancel & Back
@@ -841,7 +910,7 @@ export default function Marketplace({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setPaystackCheckout(false)}
+                    onClick={handleClosePaystackCheckout}
                     className="w-full border border-red-500/20 hover:border-red-500/30 hover:bg-red-500/10 py-2.5 rounded-xl text-xs font-semibold text-red-400 hover:text-red-300 transition-all"
                   >
                     ✕ Cancel & Return to Market
@@ -858,7 +927,7 @@ export default function Marketplace({
                 </div>
                 <h5 className="font-bold text-lg text-white">Payment Successful</h5>
                 <p className="text-xs text-gray-400">
-                  Your movie tickets are being generated and dispatched to your <strong>My Passes</strong> dashboard.
+                  Your tickets are being generated and dispatched to your <strong>My Passes</strong> dashboard.
                 </p>
               </div>
             )}
