@@ -12,14 +12,14 @@ app.use(express.json());
 
   // Health check endpoint
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", paystackConfigured: !!process.env.PAYSTACK_SECRET_KEY });
+    res.json({ status: "ok", paystackConfigured: !!(process.env.PAYSTACK_SECRET_KEY || process.env.VITE_PAYSTACK_SECRET_KEY) });
   });
 
   // 1. Paystack Banks Proxy endpoint
   // Retrieves banks for Ghana (GHS) or Nigeria (NGN)
   app.get("/api/paystack/banks", async (req, res) => {
     const currency = req.query.currency || "GHS";
-    const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
+    const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || process.env.VITE_PAYSTACK_SECRET_KEY;
 
     if (!PAYSTACK_SECRET_KEY) {
       // Return beautiful mock banks list for testing when not configured
@@ -57,7 +57,7 @@ app.use(express.json());
   // 2. Create Paystack Subaccount for Producer (sets up 80/20 split)
   app.post("/api/paystack/subaccount", async (req, res) => {
     const { business_name, settlement_bank, account_number, primary_contact_email } = req.body;
-    const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
+    const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || process.env.VITE_PAYSTACK_SECRET_KEY;
 
     if (!business_name || !settlement_bank || !account_number) {
       return res.status(400).json({ status: false, message: "Missing required bank/business details." });
@@ -111,7 +111,7 @@ app.use(express.json());
 
   app.post("/api/paystack/initialize", async (req, res) => {
     const { email, amount, subaccount_code, callback_url } = req.body;
-    const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
+    const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || process.env.VITE_PAYSTACK_SECRET_KEY;
 
     if (!email || !amount) {
       return res.status(400).json({ status: false, message: "Missing payment details (email or amount)." });
@@ -185,7 +185,7 @@ app.use(express.json());
   // 4. Verify Paystack Payment
   app.get("/api/paystack/verify/:reference", async (req, res) => {
     const { reference } = req.params;
-    const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
+    const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || process.env.VITE_PAYSTACK_SECRET_KEY;
 
     if (!PAYSTACK_SECRET_KEY || reference.startsWith("pstk_demo_")) {
       // Sandbox verification confirmation using in-memory database status
@@ -227,7 +227,8 @@ app.use(express.json());
   async function setupFrontend() {
     if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
       try {
-        const { createServer: createViteServer } = await import("vite");
+        const viteMod = "vite";
+        const { createServer: createViteServer } = await import(viteMod);
         const vite = await createViteServer({
           server: { middlewareMode: true },
           appType: "spa",
@@ -236,7 +237,7 @@ app.use(express.json());
       } catch (err) {
         console.error("Failed to load Vite server middleware:", err);
       }
-    } else {
+    } else if (!process.env.VERCEL) {
       const distPath = path.join(process.cwd(), "dist");
       app.use(express.static(distPath));
       app.get("*", (req, res) => {
