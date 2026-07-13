@@ -250,11 +250,8 @@ export default function Marketplace({
         setPendingPaystackRef(result.data.reference);
         setPaystackStep('otp'); // Set step to Awaiting Confirmation
 
-        // Open the payment gateway
-        const newWindow = window.open(result.data.authorization_url, "_blank", "noopener,noreferrer");
-        if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-          window.location.href = result.data.authorization_url;
-        }
+        // Redirect to the payment gateway in the same window
+        window.location.href = result.data.authorization_url;
       } else {
         setPaymentError(result.message || 'Failed to initialize Paystack transaction.');
       }
