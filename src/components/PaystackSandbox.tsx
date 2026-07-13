@@ -47,14 +47,19 @@ export default function PaystackSandbox({ reference, amount }: PaystackSandboxPr
             status: 'success'
           })
         });
+        const contentType = res.headers.get("content-type");
+        if (!res.ok || !contentType || !contentType.includes("application/json")) {
+          const text = await res.text();
+          throw new Error(`Server returned error (${res.status}): ${text.slice(0, 100)}`);
+        }
         const result = await res.json();
         if (result.status) {
           setPaymentStatus('success');
         } else {
           setErrorMessage('Failed to communicate payment status to backend.');
         }
-      } catch (err) {
-        setErrorMessage('Network error communicating with Sandbox backend.');
+      } catch (err: any) {
+        setErrorMessage(err.message || 'Network error communicating with Sandbox backend.');
       } finally {
         setIsProcessing(false);
       }
@@ -74,17 +79,36 @@ export default function PaystackSandbox({ reference, amount }: PaystackSandboxPr
           status: 'failed'
         })
       });
+      const contentType = res.headers.get("content-type");
+      if (!res.ok || !contentType || !contentType.includes("application/json")) {
+        const text = await res.text();
+        throw new Error(`Server returned error (${res.status}): ${text.slice(0, 100)}`);
+      }
       const result = await res.json();
       if (result.status) {
         setPaymentStatus('cancelled');
       } else {
         setErrorMessage('Failed to communicate cancellation to backend.');
       }
-    } catch (err) {
-      setErrorMessage('Network error during cancellation.');
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Network error during cancellation.');
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleReturnToApp = (status: 'success' | 'cancelled') => {
+    // Attempt window.close() first (works if it was opened in a new tab/window)
+    try {
+      window.close();
+    } catch (e) {
+      console.warn('window.close() failed:', e);
+    }
+    
+    // Always also redirect to the main app in case it's in the same window/tab
+    setTimeout(() => {
+      window.location.href = window.location.origin + window.location.pathname + `?paystack_callback=true&ref=${reference}&status=${status}`;
+    }, 100);
   };
 
   return (
@@ -339,14 +363,14 @@ export default function PaystackSandbox({ reference, amount }: PaystackSandboxPr
             </div>
 
             <div className="rounded-xl bg-[#3AC5A0]/5 p-4 text-[11px] text-[#3AC5A0] font-medium border border-[#3AC5A0]/15 leading-relaxed">
-              🎉 Sandbox confirmation completed. You can safely close this browser window and return to your main marketplace tab to claim your tickets.
+              🎉 Sandbox confirmation completed. Please click below to return to Event Ticket Hub to confirm your tickets and retrieve your passes.
             </div>
 
             <button
-              onClick={() => window.close()}
-              className="w-full bg-gray-900 hover:bg-gray-800 text-white py-3 rounded-xl font-bold text-xs transition-all"
+              onClick={() => handleReturnToApp('success')}
+              className="w-full bg-[#09A5DB] hover:bg-[#0895c6] text-white py-3 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg"
             >
-              Close Window
+              Return to Event Ticket Hub
             </button>
           </div>
         )}
@@ -366,14 +390,14 @@ export default function PaystackSandbox({ reference, amount }: PaystackSandboxPr
             </div>
 
             <div className="rounded-xl bg-red-50 p-4 text-[11px] text-red-600 border border-red-100 leading-relaxed font-medium">
-              You can now safely close this browser window and return to your main marketplace tab.
+              You can now safely return back to your main marketplace.
             </div>
 
             <button
-              onClick={() => window.close()}
-              className="w-full bg-gray-900 hover:bg-gray-800 text-white py-3 rounded-xl font-bold text-xs transition-all"
+              onClick={() => handleReturnToApp('cancelled')}
+              className="w-full bg-gray-900 hover:bg-gray-800 text-white py-3 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md"
             >
-              Close Window
+              Return to Event Ticket Hub
             </button>
           </div>
         )}

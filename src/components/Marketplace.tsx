@@ -244,6 +244,12 @@ export default function Marketplace({
         })
       });
 
+      const contentType = res.headers.get("content-type");
+      if (!res.ok || !contentType || !contentType.includes("application/json")) {
+        const text = await res.text();
+        throw new Error(`Server returned error (${res.status}): ${text.slice(0, 100)}`);
+      }
+
       const result = await res.json();
 
       if (result.status && result.data?.authorization_url) {
@@ -262,8 +268,9 @@ export default function Marketplace({
     }
   };
 
-  const handleVerifyPaystackPayment = async () => {
-    if (!pendingPaystackRef) {
+  const handleVerifyPaystackPayment = async (customRef?: string) => {
+    const referenceToVerify = customRef || pendingPaystackRef;
+    if (!referenceToVerify) {
       // Fallback: if no ref, just confirm mock payment directly
       await handleConfirmPayment();
       return;
@@ -273,13 +280,18 @@ export default function Marketplace({
     setPaymentError('');
 
     try {
-      const res = await fetch(`/api/paystack/verify/${pendingPaystackRef}`);
+      const res = await fetch(`/api/paystack/verify/${referenceToVerify}`);
+      const contentType = res.headers.get("content-type");
+      if (!res.ok || !contentType || !contentType.includes("application/json")) {
+        const text = await res.text();
+        throw new Error(`Server returned error (${res.status}): ${text.slice(0, 100)}`);
+      }
       const result = await res.json();
 
       if (result.status && result.data?.status === 'success') {
-        await handleConfirmPayment();
+        await handleConfirmPayment(referenceToVerify);
       } else {
-        setPaymentError(result.message || 'Payment verification failed. Please complete authorization in the secure window first.');
+        setPaymentError(result.message || 'Payment verification failed. Please complete authorization in the secure gateway first.');
       }
     } catch (err: any) {
       setPaymentError(err.message || 'Error verifying payment.');
@@ -288,14 +300,14 @@ export default function Marketplace({
     }
   };
 
-  const handleConfirmPayment = async () => {
+  const handleConfirmPayment = async (customRef?: string) => {
     if (cart.length === 0 || !user) return;
 
     try {
       // Loop over each item in the shopping cart and register purchases accordingly
       for (const item of cart) {
         for (let i = 0; i < item.quantity; i++) {
-          const refId = pendingPaystackRef || `pstk_${Math.random().toString(36).substring(2, 15)}`;
+          const refId = customRef || pendingPaystackRef || `pstk_${Math.random().toString(36).substring(2, 15)}`;
           const priceVal = item.ticket.price;
           const producerEarning = priceVal * 0.8;
           const hubEarning = priceVal * 0.2;
@@ -332,6 +344,32 @@ export default function Marketplace({
       setPaymentError(err.message || 'Payment processing failed. Please try again.');
     }
   };
+
+  // Intercept Paystack same-window redirect callback
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const callback = params.get('paystack_callback');
+    const ref = params.get('ref');
+    const status = params.get('status');
+
+    if (callback === 'true' && ref && user) {
+      // Clear URL params so refresh or back buttons don't re-trigger
+      const newUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+
+      setPendingPaystackRef(ref);
+      setPaystackCheckout(true);
+
+      if (status === 'success') {
+        setPaystackStep('otp');
+        // Run verification immediately
+        handleVerifyPaystackPayment(ref);
+      } else {
+        setPaymentError('The payment transaction was cancelled or failed.');
+        setPaystackStep('details');
+      }
+    }
+  }, [user]);
 
   return (
     <div className="space-y-10 animate-fadeIn" id="marketplace-container">
@@ -832,7 +870,7 @@ export default function Marketplace({
                 </p>
                 <div className="rounded-xl bg-white/5 p-3 flex items-start gap-2.5 text-xs text-gray-400 border border-white/5">
                   <ExternalLink className="h-4 w-4 shrink-0 text-gold mt-0.5" />
-                  <span>The official Paystack merchant gateway will open in a new browser tab. Use standard back or cancel controls as needed.</span>
+                  <span>The official Paystack merchant gateway will load in this browser window. Use standard back or cancel controls as needed.</span>
                 </div>
                 
                 <div className="flex gap-3 pt-2">
