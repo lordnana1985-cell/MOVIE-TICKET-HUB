@@ -106,9 +106,6 @@ app.use(express.json());
   });
 
   // 3. Initialize Paystack Split Payment
-  // In-memory status tracking for simulated Paystack transactions in Demo mode
-  const demoTransactions = new Map<string, { status: string; amount: number }>();
-
   app.post("/api/paystack/initialize", async (req, res) => {
     const { email, amount, subaccount_code, callback_url } = req.body;
     const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || process.env.VITE_PAYSTACK_SECRET_KEY;
@@ -118,21 +115,7 @@ app.use(express.json());
     }
 
     if (!PAYSTACK_SECRET_KEY) {
-      // Sandbox mode return simulated authorization url
-      const demoRef = "pstk_demo_" + Math.random().toString(36).substring(2, 15);
-      console.log(`[Demo] Initialized payment of GH₵${amount} with subaccount ${subaccount_code || 'none'}`);
-      
-      // Store initial pending state
-      demoTransactions.set(demoRef, { status: "pending", amount: Number(amount) });
-
-      return res.json({
-        status: true,
-        message: "Authorization URL created successfully (DEMO MODE)",
-        data: {
-          authorization_url: `${callback_url}?reference=${demoRef}&amount=${amount}`,
-          reference: demoRef
-        }
-      });
+      return res.status(400).json({ status: false, message: "PAYSTACK_SECRET_KEY is not configured on this server. Please define it in your environment." });
     }
     
     try {
@@ -166,42 +149,13 @@ app.use(express.json());
     }
   });
 
-  // Endpoint to let the client update the status of a demo transaction (success, failed, cancelled)
-  app.post("/api/paystack/demo-update", (req, res) => {
-    const { reference, status } = req.body;
-    if (!reference || !status) {
-      return res.status(400).json({ status: false, message: "Missing reference or status." });
-    }
-    const tx = demoTransactions.get(reference);
-    if (!tx) {
-      return res.status(404).json({ status: false, message: "Demo transaction not found." });
-    }
-    tx.status = status;
-    demoTransactions.set(reference, tx);
-    console.log(`[Demo] Updated transaction ${reference} status to ${status}`);
-    res.json({ status: true, message: `Updated transaction status to ${status}` });
-  });
-
   // 4. Verify Paystack Payment
   app.get("/api/paystack/verify/:reference", async (req, res) => {
     const { reference } = req.params;
     const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || process.env.VITE_PAYSTACK_SECRET_KEY;
 
-    if (!PAYSTACK_SECRET_KEY || reference.startsWith("pstk_demo_")) {
-      // Sandbox verification confirmation using in-memory database status
-      console.log(`[Demo] Verifying transaction reference: ${reference}`);
-      const tx = demoTransactions.get(reference) || { status: "success", amount: 150 };
-      
-      return res.json({
-        status: true,
-        message: "Verification completed (DEMO MODE)",
-        data: {
-          status: tx.status,
-          reference,
-          amount: Math.round(tx.amount * 100),
-          gateway_response: tx.status === "success" ? "Successful" : "Failed/Cancelled",
-        }
-      });
+    if (!PAYSTACK_SECRET_KEY) {
+      return res.status(400).json({ status: false, message: "PAYSTACK_SECRET_KEY is not configured on this server. Please define it in your environment." });
     }
 
     try {

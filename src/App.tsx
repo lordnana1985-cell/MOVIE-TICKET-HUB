@@ -17,7 +17,6 @@ import Marketplace from './components/Marketplace';
 import ProducerDashboard from './components/ProducerDashboard';
 import GateScanner from './components/GateScanner';
 import CustomerSupport from './components/CustomerSupport';
-import PaystackSandbox from './components/PaystackSandbox';
 import AdminPortal from './components/AdminPortal';
 
 export default function App() {
@@ -34,14 +33,7 @@ export default function App() {
     return null;
   });
 
-  // Intercept for Paystack Sandbox redirect window
-  const urlParams = new URLSearchParams(window.location.search);
-  const sandboxRef = urlParams.get('reference');
-  const sandboxAmount = urlParams.get('amount');
 
-  if (sandboxRef) {
-    return <PaystackSandbox reference={sandboxRef} amount={sandboxAmount} />;
-  }
 
   const [activeTab, setActiveTab] = useState<'marketplace' | 'producer_dashboard' | 'gate_auth' | 'admin_portal' | 'auth'>(() => {
     const savedUser = localStorage.getItem('mt_hub_current_user');
