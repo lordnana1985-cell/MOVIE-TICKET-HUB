@@ -1,7 +1,4 @@
-// @ts-ignore
-import server from "../dist/server.cjs";
-
-const app = (server as any).default || server;
+import app from "../server";
 
 export default app;
 
