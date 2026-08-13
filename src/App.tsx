@@ -65,6 +65,17 @@ export default function App() {
     reloadData();
   }, [user?.id]);
 
+  // Real-time listener for ticket updates and deletions across the application
+  useEffect(() => {
+    const handleTicketsChanged = () => {
+      reloadData();
+    };
+    window.addEventListener('mt_hub_tickets_changed', handleTicketsChanged);
+    return () => {
+      window.removeEventListener('mt_hub_tickets_changed', handleTicketsChanged);
+    };
+  }, []);
+
   // Real-time listener for secret admin tab toggle
   useEffect(() => {
     const handleToggleAdminEvent = () => {

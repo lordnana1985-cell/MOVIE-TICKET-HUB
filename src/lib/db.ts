@@ -93,11 +93,96 @@ const setLocalData = <T>(key: string, data: T): void => {
   localStorage.setItem(`mt_hub_${key}`, JSON.stringify(data));
 };
 
+// TOMBSTONE HELPERS FOR PERSISTENT GLOBAL DELETIONS
+const getDeletedTicketIds = (): Set<string> => {
+  const list = getLocalData<string[]>('deleted_ticket_ids', []);
+  return new Set(list);
+};
+
+const addDeletedTicketId = (id: string): void => {
+  const ids = getLocalData<string[]>('deleted_ticket_ids', []);
+  if (!ids.includes(id)) {
+    ids.push(id);
+    setLocalData('deleted_ticket_ids', ids);
+  }
+};
+
+const removeDeletedTicketId = (id: string): void => {
+  const ids = getLocalData<string[]>('deleted_ticket_ids', []);
+  const filtered = ids.filter(i => i !== id);
+  setLocalData('deleted_ticket_ids', filtered);
+};
+
+// CROSS-TAB & GLOBAL BROADCAST EVENT HELPER
+const globalChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('mt_hub_events') : null;
+
+if (globalChannel) {
+  globalChannel.onmessage = (event) => {
+    if (event.data && event.data.type === 'mt_hub_tickets_changed') {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('mt_hub_tickets_changed'));
+      }
+    }
+  };
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'mt_hub_tickets_changed_ts' || e.key === 'mt_hub_tickets') {
+      window.dispatchEvent(new CustomEvent('mt_hub_tickets_changed'));
+    }
+  });
+}
+
+export const notifyTicketsChanged = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('mt_hub_tickets_changed'));
+    try {
+      localStorage.setItem('mt_hub_tickets_changed_ts', Date.now().toString());
+    } catch (e) {}
+  }
+  if (globalChannel) {
+    try {
+      globalChannel.postMessage({ type: 'mt_hub_tickets_changed', timestamp: Date.now() });
+    } catch (e) {}
+  }
+};
+
+// SUBSCRIBE TO SUPABASE REALTIME CHANGES
+if (isSupabaseConfigured && supabase) {
+  try {
+    supabase
+      .channel('public:movie_tickets_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'movie_tickets' },
+        (payload) => {
+          console.log('Realtime movie_tickets event received:', payload.eventType, payload);
+          if (payload.eventType === 'DELETE') {
+            const deletedId = payload.old?.id;
+            if (deletedId) {
+              addDeletedTicketId(deletedId);
+              const tickets = getLocalData<MovieTicket[]>('tickets', []);
+              const filtered = tickets.filter(t => t.id !== deletedId);
+              setLocalData('tickets', filtered);
+            }
+          }
+          notifyTicketsChanged();
+        }
+      )
+      .subscribe();
+  } catch (err) {
+    console.warn('Failed to subscribe to Supabase Realtime channel:', err);
+  }
+}
+
 // INITIALIZE LOCAL DB IF EMPTY
 const isCleared = localStorage.getItem('mt_hub_simulations_cleared') === 'true';
+const deletedTicketIdsOnBoot = getDeletedTicketIds();
 
 if (!localStorage.getItem('mt_hub_tickets')) {
-  setLocalData('tickets', isCleared ? [] : DEFAULT_MOVIES);
+  const initialFilteredMovies = DEFAULT_MOVIES.filter(m => !deletedTicketIdsOnBoot.has(m.id));
+  setLocalData('tickets', isCleared ? [] : initialFilteredMovies);
 }
 if (!localStorage.getItem('mt_hub_users')) {
   // Setup a default admin, producer and buyer for direct testing if they don't register
@@ -644,6 +729,7 @@ export const db = {
 
   // MOVIE TICKETS
   async getTickets(): Promise<MovieTicket[]> {
+    const deletedIds = getDeletedTicketIds();
     let supabaseTickets: MovieTicket[] = [];
     let fetchSucceeded = false;
 
@@ -655,29 +741,31 @@ export const db = {
           .order('created_at', { ascending: false });
         if (error) throw error;
         if (data) {
-          supabaseTickets = data.map(m => {
-            const catMatch = m.description ? m.description.match(/<!--CAT:(\w+)-->/) : null;
-            const category = catMatch ? catMatch[1] : 'movie';
-            const cleanDescription = m.description ? m.description.replace(/<!--CAT:\w+-->/, '').trim() : (m.description || '');
-            return {
-              id: m.id,
-              title: m.title,
-              description: cleanDescription,
-              price: Number(m.price),
-              date: m.date,
-              time: m.time,
-              venue: m.venue,
-              trailerUrl: m.trailer_url,
-              producerId: m.producer_id,
-              producerName: m.producer_name,
-              totalQuantity: Number(m.total_quantity),
-              availableQuantity: Number(m.available_quantity),
-              coverUrl: m.cover_url,
-              createdAt: m.created_at,
-              category: category as any,
-              isLocalOnly: false
-            };
-          });
+          supabaseTickets = data
+            .filter(m => !deletedIds.has(m.id))
+            .map(m => {
+              const catMatch = m.description ? m.description.match(/<!--CAT:(\w+)-->/) : null;
+              const category = catMatch ? catMatch[1] : 'movie';
+              const cleanDescription = m.description ? m.description.replace(/<!--CAT:\w+-->/, '').trim() : (m.description || '');
+              return {
+                id: m.id,
+                title: m.title,
+                description: cleanDescription,
+                price: Number(m.price),
+                date: m.date,
+                time: m.time,
+                venue: m.venue,
+                trailerUrl: m.trailer_url,
+                producerId: m.producer_id,
+                producerName: m.producer_name,
+                totalQuantity: Number(m.total_quantity),
+                availableQuantity: Number(m.available_quantity),
+                coverUrl: m.cover_url,
+                createdAt: m.created_at,
+                category: category as any,
+                isLocalOnly: false
+              };
+            });
           fetchSucceeded = true;
         }
       } catch (e: any) {
@@ -690,7 +778,7 @@ export const db = {
     const uniqueLocalTicketsCleaned: MovieTicket[] = [];
     const seenTicketIds = new Set<string>();
     for (const t of localTickets) {
-      if (t && t.id && !seenTicketIds.has(t.id)) {
+      if (t && t.id && !seenTicketIds.has(t.id) && !deletedIds.has(t.id)) {
         seenTicketIds.add(t.id);
         const catMatch = t.description ? t.description.match(/<!--CAT:(\w+)-->/) : null;
         const category = t.category || (catMatch ? catMatch[1] : 'movie');
@@ -707,23 +795,31 @@ export const db = {
     }
 
     if (fetchSucceeded) {
-      // Merge local and supabase tickets to prevent data loss in fallback/sandbox scenarios.
-      // Keep Supabase tickets as primary, and add local tickets that don't exist in Supabase yet.
+      // Keep Supabase tickets as primary source of truth.
+      // ONLY merge local tickets if they were explicitly created offline (isLocalOnly === true) and NOT deleted.
       const merged = [...supabaseTickets];
       for (const localT of uniqueLocalTicketsCleaned) {
-        if (!merged.some(t => t.id === localT.id)) {
-          merged.push({ ...localT, isLocalOnly: true });
+        if (localT.isLocalOnly && !deletedIds.has(localT.id) && !merged.some(t => t.id === localT.id)) {
+          merged.push(localT);
         }
       }
-      return merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      const sorted = merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setLocalData('tickets', sorted);
+      return sorted;
     }
 
-    return uniqueLocalTicketsCleaned.map(t => ({ ...t, isLocalOnly: true }));
+    const finalLocalList = uniqueLocalTicketsCleaned
+      .filter(t => !deletedIds.has(t.id))
+      .map(t => ({ ...t, isLocalOnly: true }));
+    setLocalData('tickets', finalLocalList);
+    return finalLocalList;
   },
 
   async createTicket(ticket: MovieTicket): Promise<MovieTicket> {
+    removeDeletedTicketId(ticket.id);
     const descriptionWithCat = ticket.description + `\n<!--CAT:${ticket.category || 'movie'}-->`;
-    
+    let isSyncedToSupabase = false;
+
     if (isSupabaseConfigured && supabase) {
       try {
         const { error } = await supabase.from('movie_tickets').insert([
@@ -745,6 +841,7 @@ export const db = {
           }
         ]);
         if (error) throw error;
+        isSyncedToSupabase = true;
       } catch (e: any) {
         lastSupabaseError = e?.message || String(e);
         console.log('Supabase createTicket failed, falling back to LocalStorage:', e);
@@ -754,14 +851,24 @@ export const db = {
     const tickets = getLocalData<MovieTicket[]>('tickets', []);
     const localSavedTicket = {
       ...ticket,
-      description: descriptionWithCat
+      description: descriptionWithCat,
+      isLocalOnly: !isSyncedToSupabase
     };
     tickets.unshift(localSavedTicket);
     setLocalData('tickets', tickets);
+    notifyTicketsChanged();
     return ticket;
   },
 
   async deleteTicket(id: string): Promise<boolean> {
+    // Record tombstone ID globally to prevent repopulation anywhere
+    addDeletedTicketId(id);
+
+    // Remove from local storage immediately
+    const tickets = getLocalData<MovieTicket[]>('tickets', []);
+    const filtered = tickets.filter(t => t.id !== id);
+    setLocalData('tickets', filtered);
+
     if (isSupabaseConfigured && supabase) {
       try {
         // 1. Fetch ticket to get coverUrl and trailerUrl for cleanup
@@ -776,9 +883,8 @@ export const db = {
 
           const getStoragePathFromUrl = (url: string, bucketName: string = 'producers-assets'): string | null => {
             if (!url) return null;
-            if (url.startsWith('data:')) return null; // Ignore Base64 fallback data URLs
+            if (url.startsWith('data:')) return null;
 
-            // Standard public URL match: /public/[bucketName]/
             const searchStr = `/public/${bucketName}/`;
             const idx = url.indexOf(searchStr);
             if (idx !== -1) {
@@ -790,7 +896,6 @@ export const db = {
               return decodeURIComponent(pathPart);
             }
 
-            // Fallback match: /[bucketName]/
             const fallbackStr = `/${bucketName}/`;
             const fIdx = url.indexOf(fallbackStr);
             if (fIdx !== -1) {
@@ -821,8 +926,6 @@ export const db = {
               const { error: storageErr } = await supabase.storage.from('producers-assets').remove(filesToDelete);
               if (storageErr) {
                 console.warn('Supabase storage.remove returned an error:', storageErr);
-              } else {
-                console.log('Successfully cleaned up assets from Supabase Storage:', filesToDelete);
               }
             } catch (storageErr) {
               console.warn('Storage removal failed or some assets did not exist:', storageErr);
@@ -854,20 +957,27 @@ export const db = {
           .from('movie_tickets')
           .delete()
           .eq('id', id);
-        if (error) throw error;
+        if (error) {
+          console.error("Supabase deleteTicket error:", error);
+          throw error;
+        }
       } catch (e: any) {
         lastSupabaseError = e?.message || String(e);
         console.warn('Supabase deleteTicket failed, falling back to LocalStorage:', e?.message || e);
       }
     }
 
-    const tickets = getLocalData<MovieTicket[]>('tickets', []);
-    const filtered = tickets.filter(t => t.id !== id);
-    setLocalData('tickets', filtered);
+    notifyTicketsChanged();
     return true;
   },
 
   async clearAllTickets(): Promise<boolean> {
+    const localTickets = getLocalData<MovieTicket[]>('tickets', []);
+    localTickets.forEach(t => addDeletedTicketId(t.id));
+    DEFAULT_MOVIES.forEach(m => addDeletedTicketId(m.id));
+
+    localStorage.setItem('mt_hub_simulations_cleared', 'true');
+
     if (isSupabaseConfigured && supabase) {
       try {
         // Clear dependent gate logs and purchases to prevent broken foreign key references
@@ -896,6 +1006,7 @@ export const db = {
     setLocalData('tickets', []);
     setLocalData('purchases', []);
     setLocalData('gate_logs', []);
+    notifyTicketsChanged();
     return true;
   },
 
@@ -986,6 +1097,7 @@ export const db = {
       setLocalData('users', updatedUsers);
     }
 
+    notifyTicketsChanged();
     return purchase;
   },
 
@@ -1409,8 +1521,11 @@ export const db = {
     const filteredUsers = users.filter(u => u.id !== id);
     setLocalData('users', filteredUsers);
 
-    // Filter local tickets if it was a producer
+    // Filter local tickets if it was a producer and add to tombstones
     const tickets = getLocalData<MovieTicket[]>('tickets', []);
+    const producerTickets = tickets.filter(t => t.producerId === id);
+    producerTickets.forEach(t => addDeletedTicketId(t.id));
+
     const filteredTickets = tickets.filter(t => t.producerId !== id);
     setLocalData('tickets', filteredTickets);
 
@@ -1419,6 +1534,7 @@ export const db = {
     const filteredPurchases = purchases.filter(p => p.buyerId !== id && !tickets.some(t => t.id === p.ticketId && t.producerId === id));
     setLocalData('purchases', filteredPurchases);
 
+    notifyTicketsChanged();
     return true;
   }
 };

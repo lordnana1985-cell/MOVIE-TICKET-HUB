@@ -249,6 +249,7 @@ export default function ProducerDashboard({
     setError('');
     setSuccess('');
     try {
+      setTickets(prev => prev.filter(t => t.id !== id));
       await db.deleteTicket(id);
       setSuccess('Event ticket deleted successfully!');
       setTicketToDelete(null);
@@ -257,6 +258,7 @@ export default function ProducerDashboard({
     } catch (err: any) {
       console.error(err);
       setError(err?.message || 'Failed to delete event ticket.');
+      await loadProducerData();
     } finally {
       setIsDeleting(null);
     }

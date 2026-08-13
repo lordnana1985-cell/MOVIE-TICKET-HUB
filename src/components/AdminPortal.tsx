@@ -71,10 +71,13 @@ export default function AdminPortal({
     setActionLoading(true);
     setError('');
     setSuccess('');
+    const deletedId = ticketToDelete.id;
+    const deletedTitle = ticketToDelete.title;
     try {
-      const result = await db.deleteTicket(ticketToDelete.id);
+      setTickets(prev => prev.filter(t => t.id !== deletedId));
+      const result = await db.deleteTicket(deletedId);
       if (result) {
-        setSuccess(`Event ticket "${ticketToDelete.title}" has been deleted from the market.`);
+        setSuccess(`Event ticket "${deletedTitle}" has been deleted from the market.`);
         setTicketToDelete(null);
         onDataChanged();
         await loadAdminData();
@@ -83,6 +86,7 @@ export default function AdminPortal({
       }
     } catch (err: any) {
       setError(err?.message || 'Failed to delete ticket.');
+      await loadAdminData();
     } finally {
       setActionLoading(false);
     }
