@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - '**'
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  build-and-test:
+    name: Build, Lint, and Test
+    runs-on: ubuntu-latest
+
+    env:
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://placeholder-project.supabase.co' }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
+      PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY || 'sk_test_placeholder' }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'placeholder_gemini_key' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Type Check & Lint
+        run: npm run lint
+
+      - name: Run Test Suite
+        run: npm run test
+
+      - name: Build Application
+        run: npm run build

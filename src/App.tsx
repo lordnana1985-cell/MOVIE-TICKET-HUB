@@ -67,11 +67,16 @@ export default function App() {
 
   // Real-time listener for ticket updates and deletions across the application
   useEffect(() => {
+    let debounceTimer: any = null;
     const handleTicketsChanged = () => {
-      reloadData();
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        reloadData();
+      }, 300);
     };
     window.addEventListener('mt_hub_tickets_changed', handleTicketsChanged);
     return () => {
+      clearTimeout(debounceTimer);
       window.removeEventListener('mt_hub_tickets_changed', handleTicketsChanged);
     };
   }, []);
@@ -137,8 +142,30 @@ export default function App() {
         // Reload user stats/profile balance too
         const updatedProfile = await db.getUserProfile(user.id);
         if (updatedProfile) {
-          setUser(updatedProfile);
+          setUser(prev => {
+            if (!prev) return updatedProfile;
+            if (
+              prev.id === updatedProfile.id &&
+              prev.role === updatedProfile.role &&
+              prev.name === updatedProfile.name &&
+              prev.email === updatedProfile.email &&
+              prev.balance === updatedProfile.balance &&
+              prev.companyName === updatedProfile.companyName &&
+              prev.phoneNumber === updatedProfile.phoneNumber &&
+              prev.paystackSubaccountCode === updatedProfile.paystackSubaccountCode
+            ) {
+              return prev;
+            }
+            return updatedProfile;
+          });
           localStorage.setItem('mt_hub_current_user', JSON.stringify(updatedProfile));
+        } else {
+          console.warn("User account was removed. Logging out...");
+          localStorage.removeItem('mt_hub_current_user');
+          setUser(null);
+          setActiveTab('auth');
+          triggerAlert('error', 'Your session expired or your account has been removed. Please sign in again.');
+          return;
         }
 
         if (user.role === 'producer') {

@@ -1,8 +1,7 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { User, Mail, Shield, Building, Film, CheckCircle2, Lock, Sparkles, AlertCircle, ArrowLeft, Ticket, Phone, Eye, EyeOff } from 'lucide-react';
 import { UserProfile, UserRole } from '../types';
-import { db, getSupabaseStatus } from '../lib/db';
-import { supabase } from '../supabaseClient';
+import { db, getSupabaseStatus, supabase } from '../lib/db';
 
 interface AuthPageProps {
   initialRole: UserRole;

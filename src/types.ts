@@ -59,3 +59,9 @@ export interface GateLog {
   scannedAt: string;
   status: 'success' | 'already_used' | 'invalid';
 }
+
+export interface CartItem {
+  ticket: MovieTicket;
+  quantity: number;
+}
+

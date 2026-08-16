@@ -47,7 +47,7 @@ export default function AdminPortal({
 
   useEffect(() => {
     loadAdminData();
-  }, [initialTickets]);
+  }, []);
 
   const loadAdminData = async () => {
     setLoading(true);
@@ -80,7 +80,6 @@ export default function AdminPortal({
         setSuccess(`Event ticket "${deletedTitle}" has been deleted from the market.`);
         setTicketToDelete(null);
         onDataChanged();
-        await loadAdminData();
       } else {
         throw new Error('Ticket deletion failed.');
       }
@@ -97,18 +96,24 @@ export default function AdminPortal({
     setActionLoading(true);
     setError('');
     setSuccess('');
+    const targetProfile = profileToDelete;
     try {
-      const result = await db.deleteProfile(profileToDelete.id);
+      setProfiles(prev => prev.filter(p => p.id !== targetProfile.id));
+      if (targetProfile.role === 'producer') {
+        setTickets(prev => prev.filter(t => t.producerId !== targetProfile.id));
+      }
+
+      const result = await db.deleteProfile(targetProfile.id);
       if (result) {
-        setSuccess(`Account for "${profileToDelete.name}" (${profileToDelete.role}) was successfully deleted.`);
+        setSuccess(`Account for "${targetProfile.name}" (${targetProfile.role}) was successfully deleted.`);
         setProfileToDelete(null);
         onDataChanged();
-        await loadAdminData();
       } else {
         throw new Error('Account deletion failed.');
       }
     } catch (err: any) {
       setError(err?.message || 'Failed to remove account.');
+      await loadAdminData();
     } finally {
       setActionLoading(false);
     }

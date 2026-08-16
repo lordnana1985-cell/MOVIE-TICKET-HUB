@@ -14,7 +14,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Helper function to safely get and sanitize the Paystack Secret Key
 function getPaystackSecretKey(): string | undefined {
-  const rawKey = process.env.PAYSTACK_SECRET_KEY || process.env.VITE_PAYSTACK_SECRET_KEY;
+  const rawKey = process.env.PAYSTACK_SECRET_KEY;
   if (!rawKey) return undefined;
   // Clean surrounding double/single quotes and any trailing/leading whitespace from copied-and-pasted keys
   return rawKey.trim().replace(/^["']|["']$/g, "");
