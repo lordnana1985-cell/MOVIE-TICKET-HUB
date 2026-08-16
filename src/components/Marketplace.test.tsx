@@ -11,19 +11,16 @@ const mockTickets: MovieTicket[] = [
     description: 'An exhilarating cinematic journey across West Africa.',
     producerId: 'prod-1',
     producerName: 'Accra Studios',
-    producerEmail: 'accra@studios.com',
     venue: 'Silverbird Cinemas, Accra Mall',
     date: '2026-09-01',
     time: '19:00',
     category: 'movie',
     price: 50,
-    currency: 'GHS',
-    totalCapacity: 100,
-    availableSeats: 85,
-    seatType: 'VIP',
-    bannerUrl: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&q=80',
-    createdAt: '2026-08-01T10:00:00Z',
-    updatedAt: '2026-08-01T10:00:00Z'
+    totalQuantity: 100,
+    availableQuantity: 85,
+    trailerUrl: 'https://youtube.com',
+    coverUrl: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&q=80',
+    createdAt: '2026-08-01T10:00:00Z'
   },
   {
     id: 'm-test-2',
@@ -31,19 +28,16 @@ const mockTickets: MovieTicket[] = [
     description: 'A hilarious live stage performance.',
     producerId: 'prod-2',
     producerName: 'Theatre Guild',
-    producerEmail: 'theatre@guild.com',
     venue: 'National Theatre, Accra',
     date: '2026-09-05',
     time: '18:30',
-    category: 'play',
+    category: 'music',
     price: 80,
-    currency: 'GHS',
-    totalCapacity: 200,
-    availableSeats: 150,
-    seatType: 'Executive',
-    bannerUrl: 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=800&q=80',
-    createdAt: '2026-08-01T10:00:00Z',
-    updatedAt: '2026-08-01T10:00:00Z'
+    totalQuantity: 200,
+    availableQuantity: 150,
+    trailerUrl: 'https://youtube.com',
+    coverUrl: 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=800&q=80',
+    createdAt: '2026-08-01T10:00:00Z'
   }
 ];
 
@@ -53,9 +47,7 @@ const mockUser: UserProfile = {
   name: 'Kofi Mensah',
   role: 'buyer',
   phoneNumber: '+233240000000',
-  accountBalance: 0,
-  createdAt: '2026-08-01T00:00:00Z',
-  updatedAt: '2026-08-01T00:00:00Z'
+  balance: 0
 };
 
 describe('Marketplace Component Unit Tests', () => {
