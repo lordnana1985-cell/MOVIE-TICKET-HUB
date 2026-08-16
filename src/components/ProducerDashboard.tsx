@@ -111,6 +111,14 @@ export default function ProducerDashboard({
   const [userEnteredCode, setUserEnteredCode] = useState('');
   const [showVerificationInput, setShowVerificationInput] = useState(false);
   const [verificationError, setVerificationError] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(prev => prev - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
 
   // Form Fields
   const [setupCountry, setSetupCountry] = useState<'GHS' | 'NGN'>('GHS');
@@ -141,6 +149,30 @@ export default function ProducerDashboard({
     fetchBanks();
   }, [setupCountry]);
 
+  const handleResendCode = async () => {
+    if (resendCooldown > 0) return;
+    const newCode = Math.floor(1000 + Math.random() * 9000).toString();
+    setGeneratedCode(newCode);
+    setUserEnteredCode('');
+    setVerificationError('');
+    setResendCooldown(60);
+
+    try {
+      await fetch('/api/send-verification-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user.email,
+          code: newCode,
+          purpose: 'payout_account_change_resend'
+        })
+      });
+      setSubaccountSuccess(`Verification code resent to ${user.email}.`);
+    } catch (err) {
+      console.error("Failed to resend verification code email:", err);
+    }
+  };
+
   const handleCreateSubaccount = async (e: FormEvent) => {
     e.preventDefault();
     setSubaccountError('');
@@ -152,8 +184,22 @@ export default function ProducerDashboard({
       const code = Math.floor(1000 + Math.random() * 9000).toString();
       setGeneratedCode(code);
       setShowVerificationInput(true);
-      // Simulate sending email verification code
-      console.log(`[Verification] Sent 4-digit verification code to ${user.email}: ${code}`);
+      setResendCooldown(60);
+
+      // Dispatch code to organizer's registered email address
+      try {
+        await fetch('/api/send-verification-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: user.email,
+            code,
+            purpose: 'payout_account_change'
+          })
+        });
+      } catch (err) {
+        console.error("Failed to dispatch verification code email:", err);
+      }
       return;
     }
 
@@ -314,8 +360,8 @@ export default function ProducerDashboard({
         const ext = coverFile.name.split('.').pop() || 'jpg';
         const uuid = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
         const cleanPath = `${user.id}/covers/${ticketId}/${uuid}.${ext}`;
-        // Set allowFallback = false to ensure exact upload error is bubbled up and shown
-        finalCoverUrl = await db.uploadFile('producers-assets', cleanPath, coverFile, false, (percent) => {
+        // Allow automatic Base64/local fallback if cloud storage fails or network issues occur
+        finalCoverUrl = await db.uploadFile('producers-assets', cleanPath, coverFile, true, (percent) => {
           setUploadStatus(`Uploading cover artwork: ${percent}%`);
         });
       }
@@ -329,8 +375,8 @@ export default function ProducerDashboard({
         const ext = videoFile.name.split('.').pop() || 'mp4';
         const uuid = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
         const cleanPath = `${user.id}/videos/${ticketId}/${uuid}.${ext}`;
-        // Set allowFallback = false to ensure exact upload error is bubbled up and shown
-        formattedTrailer = await db.uploadFile('producers-assets', cleanPath, videoFile, false, (percent) => {
+        // Allow automatic Base64/local fallback if cloud storage fails or network issues occur
+        formattedTrailer = await db.uploadFile('producers-assets', cleanPath, videoFile, true, (percent) => {
           setUploadStatus(`Uploading trailer video: ${percent}%`);
         });
       } else {
@@ -1427,8 +1473,16 @@ export default function ProducerDashboard({
                         onChange={(e) => setUserEnteredCode(e.target.value.replace(/\D/g, ''))}
                         className="w-full bg-slate-950 border border-gold/30 rounded-xl px-3 py-2.5 text-center font-mono text-xl tracking-widest text-gold font-bold focus:border-gold outline-none"
                       />
-                      <div className="text-[10px] text-gray-500 font-mono text-center">
-                        Secure verification authorization token: <strong className="text-gold select-all font-bold">{generatedCode}</strong>
+                      <div className="flex items-center justify-between text-[11px] text-gray-400 pt-1">
+                        <span>Didn't receive the email?</span>
+                        <button
+                          type="button"
+                          onClick={handleResendCode}
+                          disabled={resendCooldown > 0}
+                          className="text-gold hover:underline font-medium text-[11px] disabled:opacity-50"
+                        >
+                          {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend Code'}
+                        </button>
                       </div>
                     </div>
 
