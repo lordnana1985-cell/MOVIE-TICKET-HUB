@@ -1,4 +1,4 @@
-# Movie Ticket Hub (TicketHive)
+# Movie Ticket Hub (Event Ticket Hub - ETH)
 
 A full-stack, enterprise-grade African cinema, stage play, and live event ticketing platform with real-time seat inventory, Paystack automated revenue split settlement (80% producer / 20% platform), QR code gate validation, and offline-first hybrid data persistence.
 
@@ -23,7 +23,7 @@ A full-stack, enterprise-grade African cinema, stage play, and live event ticket
 │   ├── components/              # Modular UI components (Marketplace, Dashboards, Scanner)
 │   │   ├── marketplace/         # Ticket checkout, cart drawers, filter bars
 │   │   ├── producer/            # Event creation forms, payout setup, analytics widgets
-│   │   └── auth/                # Customer & Organizer authentication components
+│   │   └── auth/                # Customer & Organizer authentication forms
 │   ├── lib/
 │   │   ├── db/                  # Modular database persistence layer
 │   │   │   ├── client.ts        # Supabase client initializer & connection health monitor
@@ -31,7 +31,7 @@ A full-stack, enterprise-grade African cinema, stage play, and live event ticket
 │   │   │   ├── purchases.ts     # Transaction logging & booking verification
 │   │   │   └── profiles.ts      # User & producer account profiles & balance tracking
 │   │   └── db.ts                # Unified public data layer export
-│   └── test/                    # Automated testing suite (Vitest + React Testing Library)
+│   └── test/                    # Automated testing suite (Vitest + React Testing Library + Supertest)
 ```
 
 ---
@@ -50,20 +50,26 @@ cd MOVIE-TICKET-HUB
 npm install
 ```
 
-### 3. Environment Configuration
+### 3. Environment Configuration & Secrets Management
 Copy the sample environment configuration:
 ```bash
 cp .env.example .env
 ```
-Fill in the configuration variables:
-| Variable | Description | Required | Scope |
-| :--- | :--- | :--- | :--- |
-| `VITE_SUPABASE_URL` | Your Supabase project URL | Yes | Client (`import.meta.env`) |
-| `VITE_SUPABASE_ANON_KEY` | Supabase Anon/Public API Key | Yes | Client (`import.meta.env`) |
-| `PAYSTACK_SECRET_KEY` | Paystack Secret Key for split payouts | Optional (Demo fallback provided) | **Server-Only** (`process.env`) |
-| `GEMINI_API_KEY` | Google Gemini API Key for AI assistance | Optional | **Server-Only** (`process.env`) |
-| `APP_URL` | Application root host URL | No | Server |
-| `DISABLE_HMR` | Disables hot reload during container builds | No | Build System |
+
+#### Secrets Configuration Table
+| Variable | Description | Required | Scope | Security Policy |
+| :--- | :--- | :--- | :--- | :--- |
+| `VITE_SUPABASE_URL` | Your Supabase project URL | Yes | Client (`import.meta.env`) | Safe for client bundle |
+| `VITE_SUPABASE_ANON_KEY` | Supabase Anon/Public API Key | Yes | Client (`import.meta.env`) | Safe with Row-Level Security |
+| `PAYSTACK_SECRET_KEY` | Paystack Secret Key for split payouts | Optional (Demo fallback provided) | **Server-Only** (`process.env`) | **NEVER** expose to browser client |
+| `GEMINI_API_KEY` | Google Gemini API Key for AI assistance | Optional | **Server-Only** (`process.env`) | **NEVER** expose to browser client |
+| `APP_URL` | Application root host URL | No | Server | Server configuration |
+| `DISABLE_HMR` | Disables hot reload during container builds | No | Build System | CI/Container environments |
+
+#### Production & CI Secrets Management
+- **GitHub Secrets**: Add `PAYSTACK_SECRET_KEY`, `GEMINI_API_KEY`, `VITE_SUPABASE_URL`, and `VITE_SUPABASE_ANON_KEY` in `Settings -> Secrets and variables -> Actions`.
+- **Cloud Secret Manager**: When deploying to Google Cloud Run or AWS ECS, mount secrets as environment variables using Cloud Secret Manager or AWS Secrets Manager.
+- **Local Development**: Keep your real keys in `.env` (which is in `.gitignore`) and never commit secret keys to git.
 
 ### 4. Running Development Server
 ```bash
@@ -73,18 +79,27 @@ The server will boot on `http://localhost:3000` with hot module reloading and ba
 
 ---
 
-## 🧪 Testing & Verification
+## 🧪 Testing, Quality & CI Enforcement
 
-Run the comprehensive unit and integration test suite:
+Run the comprehensive unit, integration, and coverage test suite:
 ```bash
-# Run all tests once
+# Run all tests
 npm run test
 
-# Run tests in watch mode
-npm run test:watch
+# Run tests with code coverage thresholds (Lines: >=60%, Branches: >=50%)
+npm run test:coverage
 
-# Run TypeScript type check and linter
+# Run TypeScript type check
 npm run lint
+
+# Run ESLint validation
+npm run lint:eslint
+
+# Check code formatting with Prettier
+npm run format:check
+
+# Format code with Prettier
+npm run format
 ```
 
 ---
@@ -93,7 +108,7 @@ npm run lint
 
 1. **Zero Secret Leaks**: All payment secret keys (`PAYSTACK_SECRET_KEY`) and AI credentials (`GEMINI_API_KEY`) are accessed strictly on the Node.js server (`server.ts`) and never injected into the client bundle (`dist/`).
 2. **Client Key Validation**: The client database initialization validates the presence of `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` and throws structured error boundaries if misconfigured.
-3. **Automated CI/CD**: Every push and pull request is gated via GitHub Actions running type checks, tests, and production builds.
+3. **Automated CI/CD**: Every push and pull request is gated via GitHub Actions running dependency security audits (`npm audit`), type checks, test coverage checks, and production builds.
 
 ---
 

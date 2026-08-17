@@ -8,6 +8,23 @@ export default defineConfig({
     environment: 'happy-dom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      thresholds: {
+        lines: 60,
+        branches: 50,
+      },
+      exclude: [
+        'dist/**',
+        'node_modules/**',
+        '**/*.test.{ts,tsx}',
+        '**/test/**',
+        'vite.config.ts',
+        'vitest.config.ts',
+        '.eslintrc.cjs',
+      ],
+    },
   },
   resolve: {
     alias: {

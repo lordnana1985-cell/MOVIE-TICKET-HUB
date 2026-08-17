@@ -20,7 +20,7 @@ const mockTickets: MovieTicket[] = [
     availableQuantity: 85,
     trailerUrl: 'https://youtube.com',
     coverUrl: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&q=80',
-    createdAt: '2026-08-01T10:00:00Z'
+    createdAt: '2026-08-01T10:00:00Z',
   },
   {
     id: 'm-test-2',
@@ -37,8 +37,8 @@ const mockTickets: MovieTicket[] = [
     availableQuantity: 150,
     trailerUrl: 'https://youtube.com',
     coverUrl: 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=800&q=80',
-    createdAt: '2026-08-01T10:00:00Z'
-  }
+    createdAt: '2026-08-01T10:00:00Z',
+  },
 ];
 
 const mockUser: UserProfile = {
@@ -47,7 +47,7 @@ const mockUser: UserProfile = {
   name: 'Kofi Mensah',
   role: 'buyer',
   phoneNumber: '+233240000000',
-  balance: 0
+  balance: 0,
 };
 
 describe('Marketplace Component Unit Tests', () => {
@@ -56,7 +56,7 @@ describe('Marketplace Component Unit Tests', () => {
     tickets: mockTickets,
     purchases: [],
     onPurchaseComplete: vi.fn(),
-    onOpenAuth: vi.fn()
+    onOpenAuth: vi.fn(),
   };
 
   beforeEach(() => {
@@ -65,32 +65,30 @@ describe('Marketplace Component Unit Tests', () => {
 
   it('renders marketplace search header and category navigation', () => {
     render(<Marketplace {...defaultProps} />);
-    
-    // Check for search input
-    const searchInput = screen.getByPlaceholderText(/Search premiere title, venue, or director/i);
-    expect(searchInput).toBeDefined();
 
-    // Check category pills and titles exist
-    expect(screen.getByText('All Events')).toBeDefined();
-    expect(screen.getByText('The Great African Adventure')).toBeDefined();
-    expect(screen.getByText('Night of Comedy & Drama')).toBeDefined();
+    const searchInput = screen.getByPlaceholderText(/Search by event title, producer, or venue/i);
+    expect(searchInput).toBeInTheDocument();
+
+    expect(screen.getByText('All Events')).toBeInTheDocument();
+    expect(screen.getByText('The Great African Adventure')).toBeInTheDocument();
+    expect(screen.getByText('Night of Comedy & Drama')).toBeInTheDocument();
   });
 
   it('filters items correctly when typing in the search box', () => {
     render(<Marketplace {...defaultProps} />);
-    
-    const searchInput = screen.getByPlaceholderText(/Search premiere title, venue, or director/i);
+
+    const searchInput = screen.getByPlaceholderText(/Search by event title, producer, or venue/i);
     fireEvent.change(searchInput, { target: { value: 'Comedy' } });
-    
-    expect(screen.getByText('Night of Comedy & Drama')).toBeDefined();
-    expect(screen.queryByText('The Great African Adventure')).toBeNull();
+
+    expect(screen.getByText('Night of Comedy & Drama')).toBeInTheDocument();
+    expect(screen.queryByText('The Great African Adventure')).not.toBeInTheDocument();
   });
 
   it('renders tickets list and handles unauthenticated state gracefully', () => {
     const onOpenAuthMock = vi.fn();
     render(<Marketplace {...defaultProps} user={null} onOpenAuth={onOpenAuthMock} />);
 
-    expect(screen.getByText('The Great African Adventure')).toBeDefined();
-    expect(screen.getByText('Night of Comedy & Drama')).toBeDefined();
+    expect(screen.getByText('The Great African Adventure')).toBeInTheDocument();
+    expect(screen.getByText('Night of Comedy & Drama')).toBeInTheDocument();
   });
 });

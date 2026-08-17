@@ -12,11 +12,13 @@ on:
       - master
 
 jobs:
-  build-and-test:
-    name: Build, Lint, and Test
+  build-lint-test:
+    name: Build, Lint, Test & Coverage
     runs-on: ubuntu-latest
 
     env:
+      CI: true
+      NODE_ENV: test
       VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://placeholder-project.supabase.co' }}
       VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
       PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY || 'sk_test_placeholder' }}
@@ -33,13 +35,18 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci || npm install
+        run: npm ci || npm install --legacy-peer-deps
 
-      - name: Run Type Check & Lint
+      - name: Security & Dependency Audit
+        run: npm audit --audit-level=high || true
+
+      - name: TypeScript Typecheck
         run: npm run lint
 
-      - name: Run Test Suite
-        run: npm run test
+      - name: Test Suite with Coverage Enforced
+        run: npm run test:coverage
 
-      - name: Build Application
+      - name: Production Build
+        env:
+          NODE_ENV: production
         run: npm run build
