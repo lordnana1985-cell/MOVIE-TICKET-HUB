@@ -1,6 +1,8 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { UserProfile, MovieTicket } from '../../types';
 import { DEFAULT_MOVIES, DEFAULT_USERS, DEFAULT_PURCHASES } from './mockData';
+import { logger } from '../logger';
+import { SupabaseError } from '../errors';
 
 const env = (import.meta as any).env || {};
 export const SUPABASE_URL = env.VITE_SUPABASE_URL;
@@ -133,7 +135,7 @@ if (isSupabaseConfigured && supabase) {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'movie_tickets' },
         (payload) => {
-          console.log('Realtime movie_tickets event received:', payload.eventType, payload);
+          logger.info('Realtime movie_tickets event received', 'client', { eventType: payload.eventType });
           if (payload.eventType === 'DELETE') {
             const deletedId = payload.old?.id;
             if (deletedId) {
@@ -148,7 +150,7 @@ if (isSupabaseConfigured && supabase) {
       )
       .subscribe();
   } catch (err) {
-    console.warn('Failed to subscribe to Supabase Realtime channel:', err);
+    logger.warn('Failed to subscribe to Supabase Realtime channel', 'client', { error: err });
   }
 }
 
@@ -179,7 +181,7 @@ if (typeof window !== 'undefined' && window.localStorage) {
         localStorage.setItem('mt_hub_users', JSON.stringify(existingUsers));
       }
     } catch (e) {
-      console.error('Failed to self-heal admin user in localStorage', e);
+      logger.error('Failed to self-heal admin user in localStorage', 'client', e);
     }
   }
 
@@ -203,7 +205,7 @@ export async function uploadFile(
       try {
         await supabase.storage.createBucket(bucketName, { public: true });
       } catch (bErr) {
-        console.log('Bucket check / create result:', bErr);
+        logger.debug('Bucket check / create result', 'client', { bErr });
       }
 
       const { data: _data, error } = await supabase.storage
@@ -231,13 +233,13 @@ export async function uploadFile(
       return publicUrl;
     } catch (e: any) {
       setSupabaseLastError(e?.message || String(e));
-      console.warn('Supabase storage upload failed:', e);
+      logger.warn('Supabase storage upload failed', 'client', { error: e?.message });
 
       if (!allowFallback) {
-        throw new Error(`Supabase Storage upload failed: ${e.message || String(e)}. Please check your bucket limits, storage size, and RLS policies.`);
+        throw new SupabaseError(`Supabase Storage upload failed: ${e.message || String(e)}. Please check your bucket limits, storage size, and RLS policies.`);
       }
 
-      console.warn('Activating automatic Base64 / Local URL fallback for file:', file.name);
+      logger.warn('Activating automatic Base64 / Local URL fallback for file', 'client', { fileName: file.name });
 
       if (onProgress) {
         onProgress(30);
@@ -257,7 +259,7 @@ export async function uploadFile(
           });
           return base64Url;
         } catch (readErr) {
-          console.error('Failed to read file as Base64:', readErr);
+          logger.error('Failed to read file as Base64', 'client', readErr);
         }
       }
 

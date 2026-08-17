@@ -11,6 +11,7 @@ import {
   notifyTicketsChanged 
 } from './client';
 import { DEFAULT_MOVIES } from './mockData';
+import { logger } from '../logger';
 
 export async function getTickets(): Promise<MovieTicket[]> {
   const deletedIds = getDeletedTicketIds();
@@ -54,7 +55,7 @@ export async function getTickets(): Promise<MovieTicket[]> {
       }
     } catch (e: any) {
       setSupabaseLastError(e?.message || String(e));
-      console.log('Supabase getTickets failed, falling back to LocalStorage:', e);
+      logger.debug('Supabase getTickets failed, falling back to LocalStorage', 'tickets', { error: e?.message });
     }
   }
 
@@ -128,7 +129,7 @@ export async function createTicket(ticket: MovieTicket): Promise<MovieTicket> {
       isSyncedToSupabase = true;
     } catch (e: any) {
       setSupabaseLastError(e?.message || String(e));
-      console.log('Supabase createTicket failed, falling back to LocalStorage:', e);
+      logger.debug('Supabase createTicket failed, falling back to LocalStorage', 'tickets', { error: e?.message });
     }
   }
 
@@ -204,7 +205,7 @@ export async function deleteTicket(id: string, skipNotification = false): Promis
           try {
             await supabase.storage.from('producers-assets').remove(filesToDelete);
           } catch (storageErr) {
-            console.warn('Storage removal non-blocking error:', storageErr);
+            logger.debug('Storage removal non-blocking error', 'tickets', { storageErr });
           }
         }
       }
@@ -212,13 +213,13 @@ export async function deleteTicket(id: string, skipNotification = false): Promis
       try {
         await supabase.from('gate_logs').delete().eq('ticket_id', id);
       } catch (dbErr) {
-        console.warn('Non-blocking gate_logs deletion error:', dbErr);
+        logger.debug('Non-blocking gate_logs deletion error', 'tickets', { dbErr });
       }
 
       try {
         await supabase.from('ticket_purchases').delete().eq('ticket_id', id);
       } catch (dbErr) {
-        console.warn('Non-blocking ticket_purchases deletion error:', dbErr);
+        logger.debug('Non-blocking ticket_purchases deletion error', 'tickets', { dbErr });
       }
 
       const { error } = await supabase
@@ -230,7 +231,7 @@ export async function deleteTicket(id: string, skipNotification = false): Promis
       }
     } catch (e: any) {
       setSupabaseLastError(e?.message || String(e));
-      console.warn('Supabase deleteTicket failed, falling back to LocalStorage:', e?.message || e);
+      logger.warn('Supabase deleteTicket failed, falling back to LocalStorage', 'tickets', { error: e?.message || e });
     }
   }
 
@@ -254,12 +255,12 @@ export async function clearAllTickets(): Promise<boolean> {
       try {
         await supabase.from('gate_logs').delete().neq('id', '_dummy_');
       } catch (e) {
-        console.log('Non-blocking gate_logs clear error:', e);
+        logger.debug('Non-blocking gate_logs clear error', 'tickets', { error: e });
       }
       try {
         await supabase.from('ticket_purchases').delete().neq('id', '_dummy_');
       } catch (e) {
-        console.log('Non-blocking ticket_purchases clear error:', e);
+        logger.debug('Non-blocking ticket_purchases clear error', 'tickets', { error: e });
       }
 
       const { error } = await supabase
@@ -269,7 +270,7 @@ export async function clearAllTickets(): Promise<boolean> {
       if (error) throw error;
     } catch (e: any) {
       setSupabaseLastError(e?.message || String(e));
-      console.warn('Supabase clearAllTickets failed, falling back to LocalStorage:', e?.message || e);
+      logger.warn('Supabase clearAllTickets failed, falling back to LocalStorage', 'tickets', { error: e?.message || e });
     }
   }
 

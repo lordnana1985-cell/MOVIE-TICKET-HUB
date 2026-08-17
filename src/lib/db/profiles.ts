@@ -9,6 +9,7 @@ import {
   notifyTicketsChanged 
 } from './client';
 import { deleteTicket } from './tickets';
+import { logger } from '../logger';
 
 export async function checkEmailExists(email: string): Promise<boolean> {
   const cleanEmail = email.trim().toLowerCase();
@@ -25,7 +26,7 @@ export async function checkEmailExists(email: string): Promise<boolean> {
         return true;
       }
     } catch (e: any) {
-      console.log('Supabase email exists check failed, falling back to LocalStorage:', e);
+      logger.debug('Supabase email exists check failed, falling back to LocalStorage', 'profiles', { error: e?.message });
     }
   }
 
@@ -52,7 +53,7 @@ export async function checkEmailOppositeRole(email: string, role: UserRole): Pro
         }
       }
     } catch (e: any) {
-      console.log('Supabase opposite role check failed, falling back to LocalStorage:', e);
+      logger.debug('Supabase opposite role check failed, falling back to LocalStorage', 'profiles', { error: e?.message });
     }
   }
 
@@ -76,7 +77,7 @@ export async function registerUser(profile: Omit<UserProfile, 'balance'>): Promi
           .delete()
           .eq('email', fullProfile.email.trim().toLowerCase());
       } catch (delErr) {
-        console.log('Failed to delete potentially orphaned profile:', delErr);
+        logger.debug('Failed to delete potentially orphaned profile', 'profiles', { delErr });
       }
 
       const { error } = await supabase.from('profiles').insert([
@@ -96,7 +97,7 @@ export async function registerUser(profile: Omit<UserProfile, 'balance'>): Promi
       if (error) throw error;
     } catch (e: any) {
       setSupabaseLastError(e?.message || String(e));
-      console.log('Supabase registration failed, falling back to LocalStorage:', e);
+      logger.debug('Supabase registration failed, falling back to LocalStorage', 'profiles', { error: e?.message });
     }
   }
   
@@ -154,7 +155,7 @@ export async function loginUser(email: string, role: UserRole): Promise<UserProf
       }
     } catch (e: any) {
       setSupabaseLastError(e?.message || String(e));
-      console.log('Supabase login/role transition failed, falling back to LocalStorage:', e);
+      logger.debug('Supabase login/role transition failed, falling back to LocalStorage', 'profiles', { error: e?.message });
     }
   }
 
@@ -206,7 +207,7 @@ export async function getUserProfile(id: string): Promise<UserProfile | null> {
       }
     } catch (e: any) {
       setSupabaseLastError(e?.message || String(e));
-      console.log('Supabase profile fetch failed, falling back to LocalStorage:', e);
+      logger.debug('Supabase profile fetch failed, falling back to LocalStorage', 'profiles', { error: e?.message });
     }
   }
 
@@ -239,7 +240,7 @@ export async function updateUserProfile(id: string, updates: Partial<UserProfile
 
       if (error) throw error;
     } catch (e: any) {
-      console.log('Supabase profile update failed or column missing, updating LocalStorage:', e);
+      logger.debug('Supabase profile update failed or column missing, updating LocalStorage', 'profiles', { error: e?.message });
     }
   }
 
@@ -322,7 +323,7 @@ export async function generatePaystackSubaccount(userOrId: UserProfile | string)
     });
     return subaccountCode;
   } catch (err) {
-    console.error("[Auto-Subaccount] Error generating subaccount:", err);
+    logger.error("[Auto-Subaccount] Error generating subaccount", 'profiles', err);
   }
   return null;
 }
@@ -336,7 +337,7 @@ export async function checkUserEmailConfirmed(): Promise<boolean> {
         return !!user.email_confirmed_at;
       }
     } catch (e) {
-      console.warn('Error checking user email confirmation status:', e);
+      logger.warn('Error checking user email confirmation status', 'profiles', { error: e });
     }
   }
   return true;
@@ -355,7 +356,7 @@ export async function resendVerificationEmail(email: string): Promise<{ success:
       if (error) throw error;
       return { success: true, message: 'Verification link resent successfully! Please check your inbox and spam folder.' };
     } catch (e: any) {
-      console.error('Error resending verification email:', e);
+      logger.error('Error resending verification email', 'profiles', e);
       const errMsg = e?.message || '';
       if (errMsg.toLowerCase().includes('rate limit') || errMsg.toLowerCase().includes('too many requests')) {
         return {
@@ -397,7 +398,7 @@ export async function getAllProfiles(): Promise<UserProfile[]> {
         fetchSucceeded = true;
       }
     } catch (e: any) {
-      console.warn('Supabase getAllProfiles failed, falling back to LocalStorage:', e?.message || e);
+      logger.warn('Supabase getAllProfiles failed, falling back to LocalStorage', 'profiles', { error: e?.message || e });
     }
   }
 
@@ -433,7 +434,7 @@ export async function deleteProfile(id: string): Promise<boolean> {
       try {
         await supabase.from('ticket_purchases').delete().eq('buyer_id', id);
       } catch (e) {
-        console.warn('Silent purchase delete issue during user deletion:', e);
+        logger.debug('Silent purchase delete issue during user deletion', 'profiles', { e });
       }
 
       try {
@@ -448,7 +449,7 @@ export async function deleteProfile(id: string): Promise<boolean> {
           }
         }
       } catch (e) {
-        console.warn('Silent ticket assets delete issue during user deletion:', e);
+        logger.debug('Silent ticket assets delete issue during user deletion', 'profiles', { e });
       }
 
       const { error } = await supabase
@@ -458,7 +459,7 @@ export async function deleteProfile(id: string): Promise<boolean> {
       if (error) throw error;
     } catch (e: any) {
       setSupabaseLastError(e?.message || String(e));
-      console.warn('Supabase deleteProfile failed, falling back to LocalStorage:', e?.message || e);
+      logger.warn('Supabase deleteProfile failed, falling back to LocalStorage', 'profiles', { error: e?.message || e });
     }
   }
 

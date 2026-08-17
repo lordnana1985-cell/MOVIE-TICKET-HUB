@@ -494,7 +494,7 @@ export default function GateScanner({ user }: GateScannerProps) {
                     </div>
                     <div>
                       <span className="text-gray-500 text-[10px] block">PAYMENT REF</span>
-                      <span className="font-bold text-sky-light truncate block">{scanResult.purchase.paystackRef.substring(0, 10)}...</span>
+                      <span className="font-bold text-sky-light truncate block">{(scanResult.purchase.paystackRef || scanResult.purchase.id || 'N/A').substring(0, 10)}...</span>
                     </div>
                   </div>
                 )}

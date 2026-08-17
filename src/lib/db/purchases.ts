@@ -7,6 +7,7 @@ import {
   notifyTicketsChanged 
 } from './client';
 import { getTickets } from './tickets';
+import { logger } from '../logger';
 
 function p_ref_map(val: any) {
   return val || '';
@@ -62,7 +63,7 @@ export async function purchaseTicket(purchase: TicketPurchase): Promise<TicketPu
           .eq('id', producer.id);
       }
     } catch (e) {
-      console.log('Supabase purchase transaction failed, falling back to LocalStorage:', e);
+      logger.debug('Supabase purchase transaction failed, falling back to LocalStorage', 'purchases', { error: e });
     }
   }
 
@@ -127,7 +128,7 @@ export async function getPurchasesForBuyer(buyerId: string): Promise<TicketPurch
         fetchSucceeded = true;
       }
     } catch (e) {
-      console.log('Supabase getPurchasesForBuyer failed, falling back to LocalStorage:', e);
+      logger.debug('Supabase getPurchasesForBuyer failed, falling back to LocalStorage', 'purchases', { error: e });
     }
   }
 
@@ -194,7 +195,7 @@ export async function getPurchasesForProducer(producerId: string): Promise<Ticke
         fetchSucceeded = true;
       }
     } catch (e) {
-      console.log('Supabase getPurchasesForProducer failed, falling back to LocalStorage:', e);
+      logger.debug('Supabase getPurchasesForProducer failed, falling back to LocalStorage', 'purchases', { error: e });
     }
   }
 
@@ -241,7 +242,7 @@ export async function saveGateLog(log: GateLog): Promise<void> {
         }
       ]);
     } catch (e) {
-      console.log('Supabase saveGateLog failed:', e);
+      logger.debug('Supabase saveGateLog failed', 'purchases', { error: e });
     }
   }
 
@@ -264,7 +265,7 @@ export async function authenticateTicket(purchaseId: string): Promise<{ success:
         .eq('id', purchaseId)
         .single();
       if (error) {
-        console.warn('Ticket not found in Supabase during auth scan:', error.message);
+        logger.debug('Ticket not found in Supabase during auth scan', 'purchases', { error: error.message });
       } else if (data) {
         purchase = {
           id: data.id,
@@ -284,7 +285,7 @@ export async function authenticateTicket(purchaseId: string): Promise<{ success:
         };
       }
     } catch (e) {
-      console.log('Supabase check before auth failed, falling back to LocalStorage:', e);
+      logger.debug('Supabase check before auth failed, falling back to LocalStorage', 'purchases', { error: e });
     }
   }
 
@@ -330,7 +331,7 @@ export async function authenticateTicket(purchaseId: string): Promise<{ success:
         .update({ status: 'used', scanned_at: timestamp })
         .eq('id', purchaseId);
     } catch (e) {
-      console.log('Supabase update ticket status failed:', e);
+      logger.debug('Supabase update ticket status failed', 'purchases', { error: e });
     }
   }
 
@@ -384,7 +385,7 @@ export async function getGateLogs(producerId?: string): Promise<GateLog[]> {
         fetchSucceeded = true;
       }
     } catch (e) {
-      console.log('Supabase getGateLogs failed, falling back to LocalStorage:', e);
+      logger.debug('Supabase getGateLogs failed, falling back to LocalStorage', 'purchases', { error: e });
     }
   }
 
