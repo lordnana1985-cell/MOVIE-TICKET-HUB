@@ -442,7 +442,6 @@ export default function Marketplace({
                       className="w-full h-full object-contain"
                       controls
                       autoPlay
-                      referrerPolicy="no-referrer"
                     />
                   );
                 } else {

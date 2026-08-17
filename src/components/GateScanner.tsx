@@ -125,8 +125,8 @@ export default function GateScanner({ user }: GateScannerProps) {
     setScanStatus('Analyzing camera frame for ticket barcodes...');
     
     setTimeout(() => {
-      // Find a purchased/unused ticket from list to authenticate
-      const pendingTicket = purchasableTickets.find(p => p.status === 'purchased') || purchasableTickets[0];
+      // Find an unused ticket from list to authenticate
+      const pendingTicket = purchasableTickets.find(p => p.status === 'unused') || purchasableTickets[0];
       if (pendingTicket) {
         setScanStatus(`Found code: ${pendingTicket.id}! Validating...`);
         setTimeout(async () => {
