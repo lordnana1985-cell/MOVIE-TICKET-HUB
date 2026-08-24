@@ -2,6 +2,8 @@ import React, { useState, useEffect, FormEvent } from 'react';
 import { Plus, Film, ArrowRight, Trash2, Phone } from 'lucide-react';
 import { UserProfile, MovieTicket, TicketPurchase } from '../types';
 import { db } from '../lib/db';
+import { logger } from '../lib/logger';
+import { useBankList } from '../hooks/useBankList';
 import { EmbeddedSupportCard } from './CustomerSupport';
 import TicketForm from './producer/TicketForm';
 import MetricsOverview from './producer/MetricsOverview';
@@ -31,12 +33,24 @@ export default function ProducerDashboard({
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Paystack subaccount configuration states
+  // Form Country
+  const [setupCountry, setSetupCountry] = useState<'GHS' | 'NGN'>('GHS');
+
+  // Paystack subaccount configuration states & hook
   const [bankSubaccount, setBankSubaccount] = useState<string | undefined>(
     user.paystackSubaccountCode
   );
-  const [bankList, setBankList] = useState<{ name: string; code: string }[]>([]);
-  const [isLoadingBanks, setIsLoadingBanks] = useState(false);
+
+  const {
+    bankList,
+    isLoading: isLoadingBanks,
+    selectedBankCode: setupBankCode,
+    setSelectedBankCode: setSetupBankCode,
+  } = useBankList({
+    currency: setupCountry,
+    enabled: true,
+  });
+
   const [isSubmittingSubaccount, setIsSubmittingSubaccount] = useState(false);
   const [subaccountError, setSubaccountError] = useState('');
   const [subaccountSuccess, setSubaccountSuccess] = useState('');
@@ -57,36 +71,12 @@ export default function ProducerDashboard({
   }, [resendCooldown]);
 
   // Form Fields
-  const [setupCountry, setSetupCountry] = useState<'GHS' | 'NGN'>('GHS');
   const [setupBusinessName, setSetupBusinessName] = useState(
     user.businessName || user.companyName || user.name || ''
   );
-  const [setupBankCode, setSetupBankCode] = useState('');
   const [setupAccountNumber, setSetupAccountNumber] = useState(
     user.accountNumber || user.phoneNumber || ''
   );
-
-  // Fetch Banks List when country changes
-  useEffect(() => {
-    const fetchBanks = async () => {
-      setIsLoadingBanks(true);
-      try {
-        const res = await fetch(`/api/paystack/banks?currency=${setupCountry}`);
-        const result = await res.json();
-        if (result.status && result.data) {
-          setBankList(result.data);
-          if (result.data.length > 0) {
-            setSetupBankCode(result.data[0].code);
-          }
-        }
-      } catch (err) {
-        console.error('Failed to load banks:', err);
-      } finally {
-        setIsLoadingBanks(false);
-      }
-    };
-    fetchBanks();
-  }, [setupCountry]);
 
   const handleResendCode = async () => {
     if (resendCooldown > 0) return;
@@ -108,7 +98,7 @@ export default function ProducerDashboard({
       });
       setSubaccountSuccess(`Verification code resent to ${user.email}.`);
     } catch (err) {
-      console.error('Failed to resend verification code email:', err);
+      logger.error('Failed to resend verification code email', 'ProducerDashboard', err);
     }
   };
 
@@ -136,7 +126,7 @@ export default function ProducerDashboard({
           }),
         });
       } catch (err) {
-        console.error('Failed to dispatch verification code email:', err);
+        logger.error('Failed to dispatch verification code email', 'ProducerDashboard', err);
       }
       return;
     }
@@ -200,8 +190,8 @@ export default function ProducerDashboard({
 
       const myPurchases = await db.getPurchasesForProducer(user.id);
       setPurchases(myPurchases);
-    } catch (e) {
-      console.error('Error loading producer dashboard data:', e);
+    } catch (e: unknown) {
+      logger.error('Error loading producer dashboard data', 'ProducerDashboard', e);
     }
   };
 
@@ -217,8 +207,8 @@ export default function ProducerDashboard({
             setIsEditingSubaccount(false);
             onTicketCreated();
           }
-        } catch (err) {
-          console.error('Auto generation of Paystack subaccount on dashboard mount failed:', err);
+        } catch (err: unknown) {
+          logger.error('Auto generation of Paystack subaccount on dashboard mount failed', 'ProducerDashboard', err);
         }
       };
       autoGenerate();
@@ -237,7 +227,7 @@ export default function ProducerDashboard({
       await loadProducerData();
       onTicketCreated();
     } catch (err: any) {
-      console.error(err);
+      logger.error('Failed to delete ticket', 'ProducerDashboard', err);
       setError(err?.message || 'Failed to delete event ticket.');
       await loadProducerData();
     } finally {
@@ -256,7 +246,7 @@ export default function ProducerDashboard({
       await loadProducerData();
       onTicketCreated();
     } catch (err: any) {
-      console.error(err);
+      logger.error('Failed to clear tickets', 'ProducerDashboard', err);
       setError(err?.message || 'Failed to clear event tickets.');
     } finally {
       setIsClearingAll(false);

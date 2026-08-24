@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   ScanLine, 
   Camera, 
@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { UserProfile, TicketPurchase, GateLog } from '../types';
 import { db } from '../lib/db';
+import { logger } from '../lib/logger';
+import { useCameraScanner } from '../hooks/useCameraScanner';
 
 interface GateScannerProps {
   user: UserProfile;
@@ -36,87 +38,22 @@ export default function GateScanner({ user }: GateScannerProps) {
   // For simulation picker
   const [purchasableTickets, setPurchasableTickets] = useState<TicketPurchase[]>([]);
 
-  // Camera Scanner Refs and States
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
-  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
-  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
-  const [cameraError, setCameraError] = useState<string | null>(null);
-  const [isCapturing, setIsCapturing] = useState(false);
-  const [scanStatus, setScanStatus] = useState<string>('');
-
-  // Stop camera tracks helper
-  const stopCamera = (streamToStop: MediaStream | null) => {
-    if (streamToStop) {
-      streamToStop.getTracks().forEach(track => track.stop());
-    }
-  };
-
-  // Enumerate camera devices
-  const getCameraDevices = async () => {
-    try {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoInputs = devices.filter(device => device.kind === 'videoinput');
-      setVideoDevices(videoInputs);
-      if (videoInputs.length > 0 && !selectedDeviceId) {
-        const backCam = videoInputs.find(d => 
-          d.label.toLowerCase().includes('back') || 
-          d.label.toLowerCase().includes('environment') || 
-          d.label.toLowerCase().includes('rear')
-        );
-        setSelectedDeviceId(backCam ? backCam.deviceId : videoInputs[0].deviceId);
-      }
-    } catch (err) {
-      console.error('Error enumerating cameras:', err);
-    }
-  };
-
-  // Start camera stream
-  const startCamera = async (deviceId: string) => {
-    setCameraError(null);
-    try {
-      if (cameraStream) {
-        stopCamera(cameraStream);
-      }
-      const constraints: MediaStreamConstraints = {
-        video: deviceId 
-          ? { deviceId: { exact: deviceId } } 
-          : { facingMode: 'environment' }
-      };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      setCameraStream(stream);
-      await getCameraDevices();
-    } catch (err: any) {
-      console.error('Error starting camera:', err);
-      setCameraError(
-        'Could not access the camera. Inside previews or iframe environments, security features may restrict camera feed access. Please verify camera permissions or use the quick simulation options below.'
-      );
-    }
-  };
-
-  // Bind camera stream to video tag
-  useEffect(() => {
-    if (videoRef.current && cameraStream) {
-      videoRef.current.srcObject = cameraStream;
-    }
-  }, [cameraStream]);
-
-  // Handle camera toggles and cleanup
-  useEffect(() => {
-    if (isScanningMode) {
-      startCamera(selectedDeviceId);
-    } else {
-      if (cameraStream) {
-        stopCamera(cameraStream);
-        setCameraStream(null);
-      }
-    }
-    return () => {
-      if (cameraStream) {
-        stopCamera(cameraStream);
-      }
-    };
-  }, [isScanningMode, selectedDeviceId]);
+  // Camera Scanner Hook
+  const {
+    videoRef,
+    videoDevices,
+    selectedDeviceId,
+    cameraStream,
+    cameraError,
+    isCapturing,
+    scanStatus,
+    setSelectedDeviceId,
+    setIsCapturing,
+    setScanStatus,
+    startCamera,
+  } = useCameraScanner({
+    enabled: isScanningMode,
+  });
 
   // Camera frame scanning/analyzing simulation
   const handleCaptureAndScan = async () => {
@@ -156,10 +93,11 @@ export default function GateScanner({ user }: GateScannerProps) {
       // Get purchases for my tickets to list them as scan simulations
       const purchases = await db.getPurchasesForProducer(user.id);
       setPurchasableTickets(purchases);
-    } catch (e) {
-      console.error('Error loading gate logs:', e);
+    } catch (e: unknown) {
+      logger.error('Error loading gate logs', 'GateScanner', e);
     }
   };
+
 
   useEffect(() => {
     loadLogsAndTickets();

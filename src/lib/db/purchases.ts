@@ -8,6 +8,7 @@ import {
 } from './client';
 import { getTickets } from './tickets';
 import { logger } from '../logger';
+import { DbError } from './errors';
 
 function p_ref_map(val: any) {
   return val || '';
@@ -62,8 +63,9 @@ export async function purchaseTicket(purchase: TicketPurchase): Promise<TicketPu
           .update({ balance: newBal })
           .eq('id', producer.id);
       }
-    } catch (e) {
-      logger.debug('Supabase purchase transaction failed, falling back to LocalStorage', 'purchases', { error: e });
+    } catch (e: unknown) {
+      const dbErr = DbError.fromError('purchaseTicket', e, true);
+      logger.debug('Supabase purchase transaction failed, falling back to LocalStorage', 'purchases', { error: dbErr.message });
     }
   }
 
@@ -127,8 +129,9 @@ export async function getPurchasesForBuyer(buyerId: string): Promise<TicketPurch
         }));
         fetchSucceeded = true;
       }
-    } catch (e) {
-      logger.debug('Supabase getPurchasesForBuyer failed, falling back to LocalStorage', 'purchases', { error: e });
+    } catch (e: unknown) {
+      const dbErr = DbError.fromError('getPurchasesForBuyer', e, true);
+      logger.debug('Supabase getPurchasesForBuyer failed, falling back to LocalStorage', 'purchases', { error: dbErr.message });
     }
   }
 
@@ -194,8 +197,9 @@ export async function getPurchasesForProducer(producerId: string): Promise<Ticke
         }));
         fetchSucceeded = true;
       }
-    } catch (e) {
-      logger.debug('Supabase getPurchasesForProducer failed, falling back to LocalStorage', 'purchases', { error: e });
+    } catch (e: unknown) {
+      const dbErr = DbError.fromError('getPurchasesForProducer', e, true);
+      logger.debug('Supabase getPurchasesForProducer failed, falling back to LocalStorage', 'purchases', { error: dbErr.message });
     }
   }
 
@@ -241,8 +245,9 @@ export async function saveGateLog(log: GateLog): Promise<void> {
           status: log.status
         }
       ]);
-    } catch (e) {
-      logger.debug('Supabase saveGateLog failed', 'purchases', { error: e });
+    } catch (e: unknown) {
+      const dbErr = DbError.fromError('saveGateLog', e, true);
+      logger.debug('Supabase saveGateLog failed', 'purchases', { error: dbErr.message });
     }
   }
 
@@ -284,8 +289,9 @@ export async function authenticateTicket(purchaseId: string): Promise<{ success:
           scannedAt: data.scanned_at
         };
       }
-    } catch (e) {
-      logger.debug('Supabase check before auth failed, falling back to LocalStorage', 'purchases', { error: e });
+    } catch (e: unknown) {
+      const dbErr = DbError.fromError('authenticateTicket', e, true);
+      logger.debug('Supabase check before auth failed, falling back to LocalStorage', 'purchases', { error: dbErr.message });
     }
   }
 
@@ -330,8 +336,9 @@ export async function authenticateTicket(purchaseId: string): Promise<{ success:
         .from('ticket_purchases')
         .update({ status: 'used', scanned_at: timestamp })
         .eq('id', purchaseId);
-    } catch (e) {
-      logger.debug('Supabase update ticket status failed', 'purchases', { error: e });
+    } catch (e: unknown) {
+      const dbErr = DbError.fromError('authenticateTicketUpdate', e, true);
+      logger.debug('Supabase update ticket status failed', 'purchases', { error: dbErr.message });
     }
   }
 
@@ -384,8 +391,9 @@ export async function getGateLogs(producerId?: string): Promise<GateLog[]> {
         }));
         fetchSucceeded = true;
       }
-    } catch (e) {
-      logger.debug('Supabase getGateLogs failed, falling back to LocalStorage', 'purchases', { error: e });
+    } catch (e: unknown) {
+      const dbErr = DbError.fromError('getGateLogs', e, true);
+      logger.debug('Supabase getGateLogs failed, falling back to LocalStorage', 'purchases', { error: dbErr.message });
     }
   }
 

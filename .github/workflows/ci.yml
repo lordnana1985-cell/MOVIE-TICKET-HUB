@@ -38,7 +38,7 @@ jobs:
         run: npm ci || npm install --legacy-peer-deps
 
       - name: Security & Dependency Audit
-        run: npm audit --audit-level=high || true
+        run: npm audit --audit-level=high
 
       - name: TypeScript Typecheck
         run: npm run lint

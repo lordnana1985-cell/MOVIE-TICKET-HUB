@@ -2,6 +2,8 @@ import React, { useState, useEffect, FormEvent } from 'react';
 import { User, Shield, Film, CheckCircle2, Lock, Sparkles, AlertCircle, ArrowLeft, Ticket, Eye, EyeOff } from 'lucide-react';
 import { UserProfile, UserRole } from '../types';
 import { db, supabase } from '../lib/db';
+import { logger } from '../lib/logger';
+import { useBankList } from '../hooks/useBankList';
 import SignInForm from './auth/SignInForm';
 import SignUpForm from './auth/SignUpForm';
 import ForgotPasswordForm from './auth/ForgotPasswordForm';
@@ -29,18 +31,17 @@ export default function AuthPage({
   const [name, setName] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [selectedBankCode, setSelectedBankCode] = useState('MTN');
-  const [bankList, setBankList] = useState<{ name: string; code: string }[]>([
-    { name: 'MTN Mobile Money', code: 'MTN' },
-    { name: 'Telecel Cash', code: 'VOD' },
-    { name: 'AirtelTigo Money', code: 'ATL' },
-    { name: 'GCB Bank', code: '040100' },
-    { name: 'Ecobank Ghana', code: '130100' },
-    { name: 'Zenith Bank Ghana', code: '180100' },
-    { name: 'Guaranty Trust Bank Ghana', code: '210100' },
-    { name: 'Fidelity Bank Ghana', code: '240100' },
-  ]);
-  const [isLoadingBanks, setIsLoadingBanks] = useState(false);
+
+  const {
+    bankList,
+    isLoading: isLoadingBanks,
+    selectedBankCode,
+    setSelectedBankCode,
+  } = useBankList({
+    currency: 'GHS',
+    enabled: role === 'producer',
+  });
+
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -91,29 +92,6 @@ export default function AuthPage({
     }, 1000);
     return () => clearInterval(interval);
   }, [resendCooldown]);
-
-  useEffect(() => {
-    if (role === 'producer') {
-      const fetchBanks = async () => {
-        setIsLoadingBanks(true);
-        try {
-          const res = await fetch('/api/paystack/banks?currency=GHS');
-          const result = await res.json();
-          if (result.status && Array.isArray(result.data)) {
-            setBankList(result.data);
-            if (result.data.length > 0) {
-              setSelectedBankCode(result.data[0].code);
-            }
-          }
-        } catch (err) {
-          console.error('Failed to load banks in AuthPage:', err);
-        } finally {
-          setIsLoadingBanks(false);
-        }
-      };
-      fetchBanks();
-    }
-  }, [role]);
 
   const handleResendVerification = async () => {
     if (resendCooldown > 0) return;
@@ -190,7 +168,7 @@ export default function AuthPage({
       setSuccess('A secure password reset link has been dispatched to your email inbox!');
       setLoading(false);
     } catch (err: any) {
-      console.warn('Password reset request error:', err);
+      logger.warn('Password reset request error', 'AuthPage', { error: err?.message || err });
       setError(err.message || 'Could not send password reset link.');
       setLoading(false);
     }
@@ -278,7 +256,7 @@ export default function AuthPage({
           });
           if (!signUpError) userAuth = data?.user;
         } catch (signUpExc: any) {
-          console.warn('Supabase signUp note:', signUpExc);
+          logger.warn('Supabase signUp note', 'AuthPage', { error: signUpExc?.message || signUpExc });
         }
 
         const userId = userAuth?.id || `u-${Math.random().toString(36).substring(2, 11)}`;
