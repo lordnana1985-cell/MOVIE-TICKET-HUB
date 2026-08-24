@@ -102,6 +102,73 @@ describe('Server API Routes & Integration Tests', () => {
     expect(res.body.data.recipient).toBe('user@example.com');
   });
 
+  it('POST /api/send-verification-code rejects invalid email or missing code', async () => {
+    const res = await request(app).post('/api/send-verification-code').send({
+      email: 'not-an-email',
+      code: '12',
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.status).toBe(false);
+    expect(res.body.errors).toBeDefined();
+  });
+
+  it('throws error when paystackFetch is called without secret key', async () => {
+    delete process.env.PAYSTACK_SECRET_KEY;
+    await expect(paystackFetch('https://api.paystack.co/bank', { method: 'GET' })).rejects.toThrow(
+      'Paystack Secret Key is not configured on this server.'
+    );
+  });
+
+  it('handles non-JSON error in paystackFetch gracefully', async () => {
+    process.env.PAYSTACK_SECRET_KEY = 'sk_test_fake_key';
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 502,
+      text: () => Promise.resolve('<html>Bad Gateway</html>'),
+    } as any);
+
+    await expect(paystackFetch('https://api.paystack.co/bank', { method: 'GET' })).rejects.toThrow(
+      'Paystack API returned non-JSON response'
+    );
+
+    global.fetch = originalFetch;
+  });
+
+  it('handles live paystack API response in /api/paystack/banks', async () => {
+    process.env.PAYSTACK_SECRET_KEY = 'sk_test_mock';
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: () => Promise.resolve(JSON.stringify({ status: true, data: [{ name: 'Test Bank', code: 'TB' }] })),
+    } as any);
+
+    const res = await request(app).get('/api/paystack/banks');
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe(true);
+    expect(res.body.data[0].code).toBe('TB');
+
+    global.fetch = originalFetch;
+  });
+
+  it('handles live paystack API error in /api/paystack/banks', async () => {
+    process.env.PAYSTACK_SECRET_KEY = 'sk_test_mock';
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      text: () => Promise.resolve(JSON.stringify({ status: false, message: 'Invalid Key' })),
+    } as any);
+
+    const res = await request(app).get('/api/paystack/banks');
+    expect(res.status).toBe(401);
+    expect(res.body.status).toBe(false);
+
+    global.fetch = originalFetch;
+  });
+
   it('sanitizes Paystack secret key with quotes correctly', () => {
     process.env.PAYSTACK_SECRET_KEY = '"sk_test_123456"';
     expect(getPaystackSecretKey()).toBe('sk_test_123456');
