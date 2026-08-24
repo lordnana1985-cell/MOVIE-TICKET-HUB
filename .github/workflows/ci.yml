@@ -17,8 +17,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      CI: true
-      NODE_ENV: test
+      CI: 'true'
       VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://placeholder-project.supabase.co' }}
       VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
       PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY || 'sk_test_placeholder' }}
@@ -35,7 +34,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci || npm install --legacy-peer-deps
+        run: npm ci --include=dev || npm install --include=dev --legacy-peer-deps
 
       - name: Security & Dependency Audit
         run: npm audit --audit-level=high
@@ -44,6 +43,8 @@ jobs:
         run: npm run lint
 
       - name: Test Suite with Coverage Enforced
+        env:
+          NODE_ENV: test
         run: npm run test:coverage
 
       - name: Production Build

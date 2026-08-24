@@ -297,9 +297,8 @@ async function setupFrontend() {
   }
 }
 
-setupFrontend();
-
 if (!process.env.VERCEL && !process.env.VITEST && process.env.NODE_ENV !== "test") {
+  setupFrontend();
   app.listen(PORT, "0.0.0.0", () => {
     // Dev server listening
   });
