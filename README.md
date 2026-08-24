@@ -255,6 +255,9 @@ The codebase maintains rigorous unit and integration test coverage using **Vites
 # Run all test suites
 npm run test
 
+# Run CI test suite with coverage report
+npm run test:ci
+
 # Run tests with code coverage report
 npm run test:coverage
 
@@ -268,22 +271,26 @@ npm run lint:eslint
 npm run format:check
 ```
 
-### Coverage Targets
+### Coverage & Test Strategy
 - **Lines Coverage**: >50% enforced in CI (`vitest.config.ts`)
 - **Branches Coverage**: >40% enforced in CI
+- **Zero External Dependencies in Tests**: All unit tests run against in-memory mocks, isolated localStorage simulators, and Vitest spy handlers, requiring zero live external services or active internet connectivity.
 - **Test Suites**: 35+ test files covering Components, Database adapters, Custom Hooks, Schemas, and Server API routes.
 
 ---
 
-## 🔒 CI/CD & Security Audits
+## 🔒 CI/CD, Dependency Automation & Security Audits
 
 Every pull request and push to `main` executes a multi-stage GitHub Actions pipeline (`.github/workflows/ci.yml`):
 
 1. **Dependency Installation**: `npm ci` with cache optimization.
 2. **Security & Vulnerability Audit**: `npm audit --audit-level=high` (fails pipeline if high/critical vulnerabilities exist).
 3. **TypeScript Static Analysis**: `npm run lint` (`tsc --noEmit`).
-4. **Automated Test Suite**: `npm run test:coverage` (enforcing coverage minimums).
+4. **Automated Test Suite**: `npm run test:ci` (enforcing coverage minimums).
 5. **Production Build**: `npm run build` (bundles client and standalone Express server).
+
+### Automated Dependency Management (Dependabot)
+- Automated weekly dependency update PRs configured via `.github/dependabot.yml` monitoring npm dependencies with automated reviewer assignments and security vulnerability alerts.
 
 ---
 

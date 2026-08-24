@@ -1,8 +1,25 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
 import Marketplace from './Marketplace';
 import { MovieTicket, UserProfile } from '../types';
+import { db } from '../lib/db';
+import { logger } from '../lib/logger';
+
+vi.mock('../lib/db', () => ({
+  db: {
+    getPurchasesForBuyer: vi.fn(),
+  },
+}));
+
+vi.mock('../lib/logger', () => ({
+  logger: {
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
 
 const mockTickets: MovieTicket[] = [
   {
@@ -61,6 +78,7 @@ describe('Marketplace Component Unit Tests', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    (db.getPurchasesForBuyer as any).mockResolvedValue([]);
   });
 
   it('renders marketplace search header and category navigation', () => {
@@ -90,5 +108,24 @@ describe('Marketplace Component Unit Tests', () => {
 
     expect(screen.getByText('The Great African Adventure')).toBeInTheDocument();
     expect(screen.getByText('Night of Comedy & Drama')).toBeInTheDocument();
+  });
+
+  it('calls logger.error instead of console.error when loadMyPasses fails', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const failureError = new Error('Database connection timeout');
+    (db.getPurchasesForBuyer as any).mockRejectedValueOnce(failureError);
+
+    render(<Marketplace {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(logger.error).toHaveBeenCalledWith(
+        'Failed to load my purchased passes:',
+        'Marketplace',
+        expect.objectContaining({ error: 'Database connection timeout' })
+      );
+    });
+
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
   });
 });

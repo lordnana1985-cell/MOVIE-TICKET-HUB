@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { UserProfile, MovieTicket, TicketPurchase } from './types';
 import { db, getSupabaseStatus } from './lib/db';
+import { logger } from './lib/logger';
 import Header from './components/Header';
 import AuthPage from './components/AuthPage';
 import Marketplace from './components/Marketplace';
@@ -130,7 +131,7 @@ export default function App() {
         if (getSupabaseStatus().configured) {
           const isEmailConfirmed = await db.checkUserEmailConfirmed();
           if (!isEmailConfirmed) {
-            console.warn("User email not verified on reload. Logging out...");
+            logger.warn("User email not verified on reload. Logging out...", 'App');
             localStorage.removeItem('mt_hub_current_user');
             setUser(null);
             setActiveTab('auth');
@@ -160,7 +161,7 @@ export default function App() {
           });
           localStorage.setItem('mt_hub_current_user', JSON.stringify(updatedProfile));
         } else {
-          console.warn("User account was removed. Logging out...");
+          logger.warn("User account was removed. Logging out...", 'App');
           localStorage.removeItem('mt_hub_current_user');
           setUser(null);
           setActiveTab('auth');
@@ -176,8 +177,8 @@ export default function App() {
           setPurchases(livePurchases);
         }
       }
-    } catch (e) {
-      console.error('Failed to reload data:', e);
+    } catch (e: any) {
+      logger.error('Failed to reload data:', 'App', { error: e?.message || e });
     }
   };
 

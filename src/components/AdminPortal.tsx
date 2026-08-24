@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldAlert, Activity, RefreshCw } from 'lucide-react';
 import { db } from '../lib/db';
+import { logger } from '../lib/logger';
 import { UserProfile, MovieTicket } from '../types';
 import AdminMetrics from './admin/AdminMetrics';
 import AdminTicketTable from './admin/AdminTicketTable';
@@ -48,7 +49,7 @@ export default function AdminPortal({
       const allTickets = await db.getTickets();
       setTickets(allTickets);
     } catch (err: any) {
-      console.error(err);
+      logger.error('Failed to load admin data:', 'AdminPortal', { error: err?.message || err });
       setError('Failed to fetch admin dashboard records. Please check database connection.');
     } finally {
       setLoading(false);

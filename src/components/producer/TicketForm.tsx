@@ -11,6 +11,9 @@ import {
 } from 'lucide-react';
 import { UserProfile, MovieTicket } from '../../types';
 import { db, getSupabaseLastError, clearSupabaseLastError } from '../../lib/db';
+import { useAssetUpload } from '../../hooks/useAssetUpload';
+import TicketFormPreview from './TicketFormPreview';
+import TicketMediaSection from './TicketMediaSection';
 
 export const TEMPLATE_COVERS = [
   // Movie / Cinema
@@ -51,11 +54,11 @@ export default function TicketForm({ user, onClose, onSuccess }: TicketFormProps
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoSource, setVideoSource] = useState<'url' | 'file'>('url');
   const [coverSource, setCoverSource] = useState<'template' | 'file'>('template');
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showPreview, setShowPreview] = useState(false);
+
+  const { isUploading, uploadStatus, processAndUploadAssets } = useAssetUpload();
 
   const handleCategoryChange = (val: 'movie' | 'music' | 'beauty' | 'campus' | 'other') => {
     setCategory(val);
@@ -83,53 +86,21 @@ export default function TicketForm({ user, onClose, onSuccess }: TicketFormProps
       return;
     }
 
-    setIsUploading(true);
-    setUploadStatus('Initializing asset upload...');
-
     try {
       const ticketId = `tkt-${Math.random().toString(36).substring(2, 11)}`;
 
-      let finalCoverUrl = customCover.trim() || selectedCover;
-      if (coverSource === 'file' && coverFile) {
-        if (coverFile.size > 10 * 1024 * 1024) {
-          throw new Error(`The selected cover image is too large (${(coverFile.size / (1024 * 1024)).toFixed(1)}MB). Please upload an image under 10MB.`);
-        }
-        setUploadStatus('Uploading cover artwork: 0%');
-        const ext = coverFile.name.split('.').pop() || 'jpg';
-        const uuid = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-        const cleanPath = `${user.id}/covers/${ticketId}/${uuid}.${ext}`;
-        finalCoverUrl = await db.uploadFile('producers-assets', cleanPath, coverFile, true, (percent) => {
-          setUploadStatus(`Uploading cover artwork: ${percent}%`);
+      const { coverUrl: finalCoverUrl, trailerUrl: formattedTrailer } =
+        await processAndUploadAssets({
+          userId: user.id,
+          ticketId,
+          coverSource,
+          coverFile,
+          selectedCover,
+          customCover,
+          videoSource,
+          videoFile,
+          trailerUrl,
         });
-      }
-
-      let formattedTrailer = trailerUrl.trim();
-      if (videoSource === 'file' && videoFile) {
-        if (videoFile.size > 50 * 1024 * 1024) {
-          throw new Error(`The selected video trailer is too large (${(videoFile.size / (1024 * 1024)).toFixed(1)}MB). Please compress your video or use a YouTube URL instead.`);
-        }
-        setUploadStatus('Uploading trailer video: 0%');
-        const ext = videoFile.name.split('.').pop() || 'mp4';
-        const uuid = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-        const cleanPath = `${user.id}/videos/${ticketId}/${uuid}.${ext}`;
-        formattedTrailer = await db.uploadFile('producers-assets', cleanPath, videoFile, true, (percent) => {
-          setUploadStatus(`Uploading trailer video: ${percent}%`);
-        });
-      } else {
-        if (formattedTrailer.includes('youtube.com/watch?v=')) {
-          const id = formattedTrailer.split('v=')[1]?.split('&')[0];
-          formattedTrailer = `https://www.youtube.com/embed/${id}`;
-        } else if (formattedTrailer.includes('youtu.be/')) {
-          const id = formattedTrailer.split('youtu.be/')[1]?.split('?')[0];
-          formattedTrailer = `https://www.youtube.com/embed/${id}`;
-        }
-
-        if (!formattedTrailer) {
-          formattedTrailer = 'https://www.youtube.com/embed/dQw4w9WgXcQ';
-        }
-      }
-
-      setUploadStatus('Generating event ticket record...');
 
       const newTicket: MovieTicket = {
         id: ticketId,
@@ -193,9 +164,6 @@ export default function TicketForm({ user, onClose, onSuccess }: TicketFormProps
 
     } catch (err: any) {
       setError(`Failed to generate ticket: ${err.message || String(err)}`);
-    } finally {
-      setIsUploading(false);
-      setUploadStatus('');
     }
   };
 
@@ -357,140 +325,22 @@ export default function TicketForm({ user, onClose, onSuccess }: TicketFormProps
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1.5 font-mono">TRAILER / VIDEO *</label>
-              <div className="space-y-2">
-                <div className="flex gap-2 p-1 bg-black/40 rounded-xl border border-white/5 text-[11px] font-medium font-mono">
-                  <button
-                    type="button"
-                    onClick={() => setVideoSource('url')}
-                    className={`flex-1 py-1.5 rounded-lg text-center transition-all ${videoSource === 'url' ? 'bg-gold/20 text-gold border border-gold/20' : 'text-gray-400 hover:text-white'}`}
-                  >
-                    YOUTUBE URL
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setVideoSource('file')}
-                    className={`flex-1 py-1.5 rounded-lg text-center transition-all ${videoSource === 'file' ? 'bg-gold/20 text-gold border border-gold/20' : 'text-gray-400 hover:text-white'}`}
-                  >
-                    UPLOAD VIDEO FILE
-                  </button>
-                </div>
-
-                {videoSource === 'url' ? (
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                      <ExternalLink className="h-4 w-4" />
-                    </span>
-                    <input
-                      type="url"
-                      placeholder="e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-                      value={trailerUrl}
-                      onChange={(e) => setTrailerUrl(e.target.value)}
-                      className="w-full rounded-xl bg-black/30 border border-white/10 px-4 py-2.5 pl-10 text-sm text-white placeholder-gray-500 focus:border-gold focus:outline-none"
-                    />
-                  </div>
-                ) : (
-                  <div className="relative border-2 border-dashed border-white/15 hover:border-gold/30 rounded-xl p-3 text-center transition-all">
-                    <input
-                      type="file"
-                      accept="video/*"
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          setVideoFile(e.target.files[0]);
-                        }
-                      }}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    />
-                    <div className="text-xs text-gray-400">
-                      <Film className="h-5 w-5 mx-auto text-gold mb-1 opacity-80" />
-                      {videoFile ? (
-                        <span className="text-gold font-semibold block truncate max-w-xs mx-auto">
-                          ✓ {videoFile.name} ({(videoFile.size / (1024 * 1024)).toFixed(1)} MB)
-                        </span>
-                      ) : (
-                        <span>Drag & drop or <strong className="text-gold">Browse video</strong></span>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1.5 font-mono">COVER ARTWORK DESIGN *</label>
-              <div className="space-y-3">
-                <div className="flex gap-2 p-1 bg-black/40 rounded-xl border border-white/5 text-[11px] font-medium font-mono">
-                  <button
-                    type="button"
-                    onClick={() => setCoverSource('template')}
-                    className={`flex-1 py-1.5 rounded-lg text-center transition-all ${coverSource === 'template' ? 'bg-gold/20 text-gold border border-gold/20' : 'text-gray-400 hover:text-white'}`}
-                  >
-                    TEMPLATES / URL
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCoverSource('file')}
-                    className={`flex-1 py-1.5 rounded-lg text-center transition-all ${coverSource === 'file' ? 'bg-gold/20 text-gold border border-gold/20' : 'text-gray-400 hover:text-white'}`}
-                  >
-                    UPLOAD COVER IMAGE
-                  </button>
-                </div>
-
-                {coverSource === 'template' ? (
-                  <div className="space-y-2 animate-fadeIn">
-                    <div className="flex items-center gap-2 overflow-x-auto py-1 no-scrollbar mb-1">
-                      {TEMPLATE_COVERS.map((cov, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => { setSelectedCover(cov); setCustomCover(''); }}
-                          className={`relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border-2 transition-all ${
-                            selectedCover === cov && !customCover ? 'border-gold scale-105 shadow-md shadow-gold/20' : 'border-white/10'
-                          }`}
-                        >
-                          <img src={cov} alt={`Template ${i}`} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
-                        </button>
-                      ))}
-                    </div>
-
-                    <input
-                      type="url"
-                      placeholder="Or paste custom cover image link..."
-                      value={customCover}
-                      onChange={(e) => { setCustomCover(e.target.value); setSelectedCover(''); }}
-                      className="w-full rounded-xl bg-black/30 border border-white/10 px-4 py-2.5 text-xs text-white placeholder-gray-500 focus:border-gold focus:outline-none"
-                    />
-                  </div>
-                ) : (
-                  <div className="relative border-2 border-dashed border-white/15 hover:border-gold/30 rounded-xl p-3 text-center transition-all animate-fadeIn">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          setCoverFile(e.target.files[0]);
-                        }
-                      }}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    />
-                    <div className="text-xs text-gray-400">
-                      <Plus className="h-5 w-5 mx-auto text-gold mb-1 opacity-80" />
-                      {coverFile ? (
-                        <div className="flex items-center justify-center gap-2">
-                          <img src={URL.createObjectURL(coverFile)} alt="Preview" className="h-8 w-8 object-cover rounded border border-white/10" />
-                          <span className="text-gold font-semibold truncate max-w-xs">
-                            ✓ {coverFile.name} ({(coverFile.size / 1024).toFixed(0)} KB)
-                          </span>
-                        </div>
-                      ) : (
-                        <span>Drag & drop or <strong className="text-gold">Browse image</strong></span>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+            <TicketMediaSection
+              trailerUrl={trailerUrl}
+              setTrailerUrl={setTrailerUrl}
+              videoSource={videoSource}
+              setVideoSource={setVideoSource}
+              videoFile={videoFile}
+              setVideoFile={setVideoFile}
+              coverSource={coverSource}
+              setCoverSource={setCoverSource}
+              selectedCover={selectedCover}
+              setSelectedCover={setSelectedCover}
+              customCover={customCover}
+              setCustomCover={setCustomCover}
+              coverFile={coverFile}
+              setCoverFile={setCoverFile}
+            />
           </div>
         </div>
 
@@ -541,35 +391,17 @@ export default function TicketForm({ user, onClose, onSuccess }: TicketFormProps
         </div>
       </form>
 
-      {showPreview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-          <div className="relative w-full max-w-lg rounded-2xl glass-panel border border-gold/40 p-6 shadow-2xl">
-            <button
-              onClick={() => setShowPreview(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white"
-            >
-              <X className="h-5 w-5" />
-            </button>
-            <h4 className="text-base font-bold text-gold font-display mb-4">Ticket Preview</h4>
-            <div className="rounded-xl overflow-hidden bg-slate-900 border border-white/10">
-              <img 
-                src={coverFile ? URL.createObjectURL(coverFile) : (customCover || selectedCover)} 
-                alt="Ticket Preview" 
-                className="h-48 w-full object-cover" 
-                referrerPolicy="no-referrer"
-              />
-              <div className="p-4 space-y-2">
-                <h5 className="font-bold text-white text-lg">{title || 'Untitled Event'}</h5>
-                <p className="text-xs text-gray-300 line-clamp-2">{description || 'No description provided.'}</p>
-                <div className="flex justify-between items-center pt-2 border-t border-white/10 text-xs">
-                  <span className="text-gold font-bold text-sm font-mono">GH₵{price}</span>
-                  <span className="text-gray-400">{venue || 'Venue TBD'}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <TicketFormPreview
+        isOpen={showPreview}
+        onClose={() => setShowPreview(false)}
+        title={title}
+        description={description}
+        price={price}
+        venue={venue}
+        coverImageSrc={
+          coverFile ? URL.createObjectURL(coverFile) : customCover || selectedCover
+        }
+      />
     </div>
   );
 }
