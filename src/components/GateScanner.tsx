@@ -2,24 +2,22 @@ import { useState, useEffect } from 'react';
 import { 
   ScanLine, 
   Camera, 
-  CheckCircle2, 
-  XCircle, 
-  AlertTriangle, 
-  Activity, 
   Search, 
   ArrowRight,
   User,
   Film,
   KeyRound,
-  History,
   QrCode,
   RefreshCw,
-  Video
+  Video,
+  AlertTriangle
 } from 'lucide-react';
 import { UserProfile, TicketPurchase, GateLog } from '../types';
 import { db } from '../lib/db';
 import { logger } from '../lib/logger';
 import { useCameraScanner } from '../hooks/useCameraScanner';
+import GateLogList from './scanner/GateLogList';
+import ScanResultModal from './scanner/ScanResultModal';
 
 interface GateScannerProps {
   user: UserProfile;
@@ -35,10 +33,8 @@ export default function GateScanner({ user }: GateScannerProps) {
     purchase?: TicketPurchase;
   } | null>(null);
 
-  // For simulation picker
   const [purchasableTickets, setPurchasableTickets] = useState<TicketPurchase[]>([]);
 
-  // Camera Scanner Hook
   const {
     videoRef,
     videoDevices,
@@ -55,56 +51,45 @@ export default function GateScanner({ user }: GateScannerProps) {
     enabled: isScanningMode,
   });
 
-  // Camera frame scanning/analyzing simulation
   const handleCaptureAndScan = async () => {
     if (isCapturing) return;
     setIsCapturing(true);
     setScanStatus('Analyzing camera frame for ticket barcodes...');
     
     setTimeout(() => {
-      // Find an unused ticket from list to authenticate
       const pendingTicket = purchasableTickets.find(p => p.status === 'unused') || purchasableTickets[0];
       if (pendingTicket) {
         setScanStatus(`Found code: ${pendingTicket.id}! Validating...`);
         setTimeout(async () => {
           await handleAuthenticate(pendingTicket.id);
           setIsCapturing(false);
-          setScanStatus('');
+          setScanStatus('Pass validated. Ready for next ticket...');
         }, 800);
       } else {
-        setScanStatus('No valid barcode found. Hold ticket code up to the camera lens or enter it manually.');
-        setTimeout(() => {
-          setIsCapturing(false);
-          setScanStatus('');
-        }, 2200);
+        setScanStatus('No valid QR/Barcode detected. Hold steady.');
+        setIsCapturing(false);
       }
     }, 1200);
   };
-
-  const loadLogsAndTickets = async () => {
-    try {
-      const myLogs = await db.getGateLogs(user.id);
-      setLogs(myLogs);
-
-      // Load all purchases across the system to simulate scans easily
-      const allTickets = await db.getTickets();
-      const myTicketIds = allTickets.filter(t => t.producerId === user.id).map(t => t.id);
-
-      // Get purchases for my tickets to list them as scan simulations
-      const purchases = await db.getPurchasesForProducer(user.id);
-      setPurchasableTickets(purchases);
-    } catch (e: unknown) {
-      logger.error('Error loading gate logs', 'GateScanner', e);
-    }
-  };
-
 
   useEffect(() => {
     loadLogsAndTickets();
   }, [user.id]);
 
-  const handleAuthenticate = async (codeToUse?: string) => {
-    const code = (codeToUse || ticketCode).trim().toUpperCase();
+  const loadLogsAndTickets = async () => {
+    try {
+      const allPurchases = await db.getPurchasesForProducer(user.id);
+      setPurchasableTickets(allPurchases);
+      
+      const storedLogs = await db.getGateLogs();
+      setLogs(storedLogs);
+    } catch (e) {
+      logger.error('Failed to load tickets or gate logs', 'GateScanner', e);
+    }
+  };
+
+  const handleAuthenticate = async (codeToAuth?: string) => {
+    const code = (codeToAuth || ticketCode).trim();
     if (!code) return;
 
     try {
@@ -150,7 +135,7 @@ export default function GateScanner({ user }: GateScannerProps) {
               Ticket Gate Pass Verification
             </h3>
 
-            {/* TAB SELECTOR: MANUAL ENTRY VS LIVE WEBCAM SCANNER */}
+            {/* TAB SELECTOR */}
             <div className="flex rounded-xl bg-white/5 p-1 border border-white/10 max-w-md">
               <button
                 type="button"
@@ -180,7 +165,6 @@ export default function GateScanner({ user }: GateScannerProps) {
 
             {/* CONDITIONAL INTERFACES */}
             {!isScanningMode ? (
-              /* MANUAL CODE FIELD */
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="relative flex-1">
                   <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400">
@@ -204,7 +188,6 @@ export default function GateScanner({ user }: GateScannerProps) {
                 </button>
               </div>
             ) : (
-              /* LIVE WEBCAM SCANNER HUD VIEWPORT */
               <div className="space-y-4">
                 <style>{`
                   @keyframes scan {
@@ -225,7 +208,6 @@ export default function GateScanner({ user }: GateScannerProps) {
                   }
                 `}</style>
 
-                {/* DEVICE SELECTOR ROW */}
                 {videoDevices.length > 1 && (
                   <div className="flex items-center gap-2 bg-black/40 border border-white/5 rounded-xl px-3 py-2 text-xs">
                     <Video className="h-3.5 w-3.5 text-gold shrink-0" />
@@ -244,277 +226,121 @@ export default function GateScanner({ user }: GateScannerProps) {
                   </div>
                 )}
 
-                {/* VIEWPORT CONTROLLER CONTAINER */}
                 <div className="relative rounded-2xl overflow-hidden bg-black aspect-video border border-white/10 shadow-2xl flex flex-col justify-center items-center">
-                  
-                  {/* Holographic HUD corner reticles */}
                   <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-gold/60 pointer-events-none z-10" />
                   <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-gold/60 pointer-events-none z-10" />
                   <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-gold/60 pointer-events-none z-10" />
                   <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-gold/60 pointer-events-none z-10" />
 
-                  {/* ACTIVE VIEWPORT STATES */}
                   {cameraError ? (
                     <div className="p-6 text-center max-w-sm space-y-3 z-10">
                       <div className="h-12 w-12 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center mx-auto">
                         <AlertTriangle className="h-6 w-6" />
                       </div>
-                      <p className="text-xs text-gray-300 font-mono leading-relaxed">
-                        {cameraError}
-                      </p>
+                      <p className="text-xs text-red-400 font-mono">{cameraError}</p>
                       <button
                         type="button"
-                        onClick={() => startCamera(selectedDeviceId)}
-                        className="rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-[10px] font-bold text-white hover:bg-white/10 transition-all flex items-center gap-1.5 mx-auto"
+                        onClick={() => startCamera()}
+                        className="rounded-lg bg-white/10 hover:bg-white/20 px-3 py-1.5 text-xs text-white transition-colors"
                       >
-                        <RefreshCw className="h-3 w-3" />
-                        Retry Camera Access
+                        Retry Camera
                       </button>
-                    </div>
-                  ) : !cameraStream ? (
-                    <div className="text-center p-6 space-y-3 z-10">
-                      <div className="animate-spin rounded-full h-8 w-8 border-2 border-gold border-t-transparent mx-auto" />
-                      <p className="text-xs text-gold/80 font-mono font-bold tracking-widest animate-pulse">
-                        INITIALIZING DEVICE CAMERA FEED...
-                      </p>
                     </div>
                   ) : (
                     <>
-                      {/* Live sweeping laser */}
-                      <div className="scanner-laser" />
-
-                      {/* Video feedback */}
                       <video
                         ref={videoRef}
-                        autoPlay
                         playsInline
                         muted
-                        className="w-full h-full object-cover"
+                        className={`h-full w-full object-cover transition-opacity duration-500 ${
+                          cameraStream ? 'opacity-90' : 'opacity-0'
+                        }`}
                       />
-
-                      {/* Bottom scan trigger HUD overlay */}
-                      <div className="absolute bottom-4 inset-x-4 bg-black/80 backdrop-blur-md rounded-xl p-3 border border-white/10 flex items-center justify-between z-20">
-                        <div className="min-w-0">
-                          <span className="text-[9px] font-mono font-bold text-emerald-400 block tracking-widest uppercase animate-pulse">
-                            ● DEVICE CAMERA ACTIVE
-                          </span>
-                          <span className="text-[10px] text-gray-400 font-mono block truncate">
-                            {scanStatus || "Ready to capture and authenticate ticket passes"}
-                          </span>
+                      
+                      {cameraStream && <div className="scanner-laser" />}
+                      
+                      <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-black/40 backdrop-blur-[2px] pointer-events-none">
+                        <div className="w-48 h-48 sm:w-56 sm:h-56 border border-gold/40 rounded-2xl relative flex items-center justify-center shadow-[0_0_50px_rgba(234,179,8,0.15)]">
+                          <QrCode className="h-16 w-16 text-gold/30" />
                         </div>
-
-                        <button
-                          type="button"
-                          onClick={handleCaptureAndScan}
-                          disabled={isCapturing}
-                          className="rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black px-4 py-2 text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1.5"
-                        >
-                          {isCapturing ? (
-                            <>
-                              <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-black border-t-transparent" />
-                              <span>Scanning...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Camera className="h-3.5 w-3.5" />
-                              <span>Capture & Scan</span>
-                            </>
-                          )}
-                        </button>
                       </div>
                     </>
                   )}
                 </div>
 
-                {/* Helpful instructions / support disclaimer */}
-                <p className="text-[11px] text-gray-500 leading-normal bg-white/5 rounded-xl p-3 border border-white/5">
-                  <strong>💡 Pro-tip:</strong> Align the client's ticket pass barcode inside the camera frame and click <strong>Capture & Scan</strong>. You can also click any of the purchased tickets in the quick simulation row below to mock-scan them immediately!
-                </p>
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-black/30 border border-white/5 rounded-xl p-3 text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-gray-300 font-mono text-[11px]">{scanStatus}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCaptureAndScan}
+                    disabled={isCapturing}
+                    className="w-full sm:w-auto rounded-lg bg-gold/20 hover:bg-gold/30 border border-gold/40 px-4 py-2 text-xs font-bold text-gold hover:text-white transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <RefreshCw className={`h-3.5 w-3.5 ${isCapturing ? 'animate-spin' : ''}`} />
+                    {isCapturing ? 'Analyzing...' : 'Scan Active Frame'}
+                  </button>
+                </div>
               </div>
             )}
 
-            {/* LIVE SIMULATOR SCROLL ROW */}
-            <div className="pt-4 border-t border-white/5">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider font-mono">
-                  Simulate Live Gate QR Scan
-                </h4>
-                <span className="text-[10px] text-sky-light/80 font-mono">CLICK TO SCAN TICKET</span>
+            {/* SIMULATOR QUICK VALIDATOR */}
+            <div className="pt-4 border-t border-white/10 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-mono uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+                  <Search className="h-3.5 w-3.5 text-gold" />
+                  Quick Pass Simulator (Active Database)
+                </span>
+                <span className="text-[10px] text-gray-500 font-mono">
+                  {purchasableTickets.length} Passes On File
+                </span>
               </div>
 
-              {purchasableTickets.length === 0 ? (
-                <p className="text-xs text-gray-500 py-2">
-                  No purchases found to simulate scans with. Go to the marketplace and buy a ticket!
-                </p>
-              ) : (
-                <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
-                  {purchasableTickets.map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => simulateQuickScan(p)}
-                      className={`shrink-0 rounded-xl bg-white/5 border px-3 py-2.5 text-left transition-all hover:bg-white/10 ${
-                        p.status === 'used' ? 'border-white/5 opacity-50' : 'border-sky-light/10 hover:border-sky-light/30'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <QrCode className="h-4 w-4 text-gold shrink-0" />
-                        <span className="text-[10px] font-mono text-gray-400">{p.id}</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                {purchasableTickets.slice(0, 6).map((purchase) => (
+                  <button
+                    key={purchase.id}
+                    onClick={() => simulateQuickScan(purchase)}
+                    className="group rounded-xl bg-white/5 border border-white/10 p-2.5 text-left hover:border-gold/50 transition-all flex items-center justify-between"
+                  >
+                    <div className="min-w-0 pr-2">
+                      <div className="flex items-center gap-1.5 text-xs text-white font-medium truncate">
+                        <Film className="h-3 w-3 text-gold shrink-0" />
+                        <span className="truncate">{purchase.movieTitle}</span>
                       </div>
-                      <span className="text-xs font-bold text-white block max-w-[150px] truncate">{p.buyerName}</span>
-                      <span className="text-[10px] text-sky-light block truncate max-w-[150px]">{p.movieTitle}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
+                      <div className="flex items-center gap-1 text-[10px] text-gray-400 font-mono mt-0.5">
+                        <User className="h-2.5 w-2.5" />
+                        <span className="truncate">{purchase.buyerName}</span>
+                        <span className="text-gray-600">•</span>
+                        <span className="text-gray-500 font-bold">{purchase.id.substring(0, 10)}...</span>
+                      </div>
+                    </div>
+                    <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase ${
+                      purchase.status === 'unused' 
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                        : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                    }`}>
+                      {purchase.status}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* DYNAMIC ACCESS GRANTED / ACCESS DENIED FEEDBACK SCREEN */}
+          {/* SCAN RESULT MODAL */}
           {scanResult && (
-            <div 
-              className={`rounded-2xl p-6 md:p-8 border animate-slideDown flex flex-col md:flex-row items-center gap-6 ${
-                scanResult.success 
-                  ? 'bg-emerald-500/10 border-emerald-500/20 text-white' 
-                  : scanResult.purchase?.status === 'used'
-                  ? 'bg-amber-500/10 border-amber-500/20 text-white'
-                  : 'bg-red-500/10 border-red-500/20 text-white'
-              }`}
-            >
-              <div className="shrink-0">
-                {scanResult.success ? (
-                  <div className="h-16 w-16 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                    <CheckCircle2 className="h-10 w-10" />
-                  </div>
-                ) : scanResult.purchase?.status === 'used' ? (
-                  <div className="h-16 w-16 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
-                    <AlertTriangle className="h-10 w-10 animate-pulse" />
-                  </div>
-                ) : (
-                  <div className="h-16 w-16 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-400">
-                    <XCircle className="h-10 w-10" />
-                  </div>
-                )}
-              </div>
-
-              <div className="flex-1 space-y-2 text-center md:text-left">
-                <div className="flex items-center justify-center md:justify-start gap-2">
-                  <span className={`text-xs font-mono font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full ${
-                    scanResult.success 
-                      ? 'bg-emerald-500/20 text-emerald-400' 
-                      : 'bg-red-500/20 text-red-400'
-                  }`}>
-                    {scanResult.success ? 'ACCESS GRANTED' : 'ACCESS DENIED'}
-                  </span>
-                  {scanResult.purchase && (
-                    <span className="text-xs text-gray-400 font-mono">
-                      Ref: {scanResult.purchase.id}
-                    </span>
-                  )}
-                </div>
-
-                <h4 className="text-xl font-bold font-display leading-tight">
-                  {scanResult.message}
-                </h4>
-
-                {scanResult.purchase && (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-3 mt-3 border-t border-white/10 text-left text-xs font-mono text-gray-300">
-                    <div>
-                      <span className="text-gray-500 text-[10px] block">MOVIE SHOW</span>
-                      <span className="font-bold text-white truncate block">{scanResult.purchase.movieTitle}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500 text-[10px] block">TICKET HOLDER</span>
-                      <span className="font-bold text-white truncate block">{scanResult.purchase.buyerName}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500 text-[10px] block">AMOUNT PAID</span>
-                      <span className="font-bold text-gold-light">₦{scanResult.purchase.amountPaid.toLocaleString()}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500 text-[10px] block">PAYMENT REF</span>
-                      <span className="font-bold text-sky-light truncate block">{(scanResult.purchase.paystackRef || scanResult.purchase.id || 'N/A').substring(0, 10)}...</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <button
-                onClick={() => setScanResult(null)}
-                className="rounded-lg p-1.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white"
-              >
-                <XCircle className="h-5 w-5" />
-              </button>
-            </div>
+            <ScanResultModal
+              scanResult={scanResult}
+              onClose={() => setScanResult(null)}
+            />
           )}
         </div>
 
         {/* RIGHT ONE COL: REAL-TIME GATE CHECK-IN LOGS */}
-        <div className="space-y-4">
-          {/* Gate Auth System status card from Geometric Balance theme */}
-          <div className="p-4 rounded-2xl bg-white/5 border border-white/10 shadow-2xl backdrop-blur-xl">
-            <p className="text-[10px] text-white/40 uppercase font-bold mb-2 tracking-tighter font-mono">Gate Auth System</p>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-              </div>
-              <span className="text-xs font-medium text-white/80">Scanner Active: Terminal 04</span>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <h3 className="font-display text-lg font-bold text-white flex items-center gap-2">
-              <History className="h-4.5 w-4.5 text-sky-light" />
-              Gate Entrance Logs
-            </h3>
-            <span className="text-[10px] text-gray-400 font-mono uppercase tracking-wider flex items-center gap-1">
-              <Activity className="h-3 w-3 text-emerald-400 animate-pulse" />
-              SECURE LOGS
-            </span>
-          </div>
-
-          <div className="rounded-2xl glass-panel p-4 border border-white/10 space-y-3 max-h-[500px] overflow-y-auto">
-            {logs.length === 0 ? (
-              <div className="py-12 text-center text-xs text-gray-500">
-                No tickets checked in at the gate yet. Enter code above to begin.
-              </div>
-            ) : (
-              logs.map((log) => (
-                <div 
-                  key={log.id} 
-                  className={`rounded-xl bg-white/5 border p-3 flex flex-col gap-1 hover:bg-white/10 transition-colors ${
-                    log.status === 'success' 
-                      ? 'border-emerald-500/10' 
-                      : log.status === 'already_used'
-                      ? 'border-amber-500/10'
-                      : 'border-red-500/10'
-                  }`}
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <span className="text-xs font-bold text-white block truncate max-w-[140px]">{log.buyerName}</span>
-                      <span className="text-[10px] text-gray-400 block truncate max-w-[160px]">{log.movieTitle}</span>
-                    </div>
-
-                    <span className={`rounded px-1.5 py-0.5 text-[8px] font-mono font-bold uppercase ${
-                      log.status === 'success'
-                        ? 'bg-emerald-500/10 text-emerald-400'
-                        : log.status === 'already_used'
-                        ? 'bg-amber-500/10 text-amber-400'
-                        : 'bg-red-500/10 text-red-400'
-                    }`}>
-                      {log.status === 'success' ? 'GRANTED' : log.status === 'already_used' ? 'USED' : 'INVALID'}
-                    </span>
-                  </div>
-
-                  <div className="mt-1 pt-1.5 border-t border-white/5 flex items-center justify-between text-[8px] font-mono text-gray-500">
-                    <span>Code: {log.purchaseId.substring(0, 14)}...</span>
-                    <span>{new Date(log.scannedAt).toLocaleTimeString()}</span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+        <GateLogList logs={logs} />
       </div>
     </div>
   );
