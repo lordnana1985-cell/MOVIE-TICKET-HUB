@@ -50,7 +50,7 @@ export async function paystackFetch(url: string, options: { method: 'GET' | 'POS
   let responseData: any;
   try {
     responseData = JSON.parse(responseText);
-  } catch (err) {
+  } catch {
     throw new Error(`Paystack API returned non-JSON response (status ${response.status})`);
   }
 
@@ -262,7 +262,7 @@ app.post('/api/send-verification-code', async (req: Request, res: Response) => {
     });
   }
 
-  const { email, code, purpose } = parseResult.data;
+  const { email, purpose } = parseResult.data;
 
   return res.json({
     status: true,
@@ -286,7 +286,7 @@ async function setupFrontend() {
         appType: 'spa',
       });
       app.use(vite.middlewares);
-    } catch (err) {
+    } catch {
       // Fallback
     }
   } else if (!process.env.VERCEL) {

@@ -12,28 +12,27 @@ import TrailerLightboxModal from './marketplace/TrailerLightboxModal';
 interface MarketplaceProps {
   user: UserProfile | null;
   tickets: MovieTicket[];
-  purchases: TicketPurchase[];
-  onPurchaseComplete: () => void;
+  purchases?: TicketPurchase[];
+  onPurchaseSuccess?: () => void;
+  onPurchaseComplete?: () => void;
   onOpenAuth: (role: 'producer' | 'buyer') => void;
 }
 
 export default function Marketplace({
   user,
   tickets,
-  purchases,
+  onPurchaseSuccess,
   onPurchaseComplete,
   onOpenAuth,
 }: MarketplaceProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [priceFilter, setPriceFilter] = useState<number>(2000);
-  const [selectedMovie, setSelectedMovie] = useState<MovieTicket | null>(null);
+  const [priceFilter] = useState<number>(2000);
   const [selectedTrailer, setSelectedTrailer] = useState<MovieTicket | null>(null);
 
   // Paystack Overlay & Cart State
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [myPasses, setMyPasses] = useState<TicketPurchase[]>([]);
   const [cart, setCart] = useState<CartItem[]>(() => {
     try {
       const saved = localStorage.getItem('movie_ticket_hub_cart');
@@ -94,29 +93,25 @@ export default function Marketplace({
   const cartTotal = cart.reduce((total, item) => total + item.ticket.price * item.quantity, 0);
   const totalItemsCount = cart.reduce((total, item) => total + item.quantity, 0);
 
-  const loadMyPasses = async () => {
-    if (!user) return;
-    try {
-      const myTickets = await db.getPurchasesForBuyer(user.id);
-      setMyPasses(myTickets);
-    } catch (e: any) {
-      logger.error('Failed to load my purchased passes:', 'Marketplace', {
-        error: e?.message || e,
-      });
-    }
-  };
-
-  useEffect(() => {
-    loadMyPasses();
-  }, [user, purchases]);
-
   useEffect(() => {
     if (!user) {
-      setSelectedMovie(null);
       setSelectedTrailer(null);
       setIsCheckoutOpen(false);
       setCart([]);
+      return;
     }
+
+    const loadMyPasses = async () => {
+      try {
+        await db.getPurchasesForBuyer(user.id);
+      } catch (e: any) {
+        logger.error('Failed to load my purchased passes:', 'Marketplace', {
+          error: e?.message || e,
+        });
+      }
+    };
+
+    loadMyPasses();
   }, [user]);
 
   // Filter tickets
@@ -130,6 +125,11 @@ export default function Marketplace({
       selectedCategory === 'all' || (tkt.category || 'movie') === selectedCategory;
     return matchesSearch && matchesPrice && matchesCategory;
   });
+
+  const handleComplete = () => {
+    if (onPurchaseSuccess) onPurchaseSuccess();
+    if (onPurchaseComplete) onPurchaseComplete();
+  };
 
   return (
     <div className="space-y-10 animate-fadeIn" id="marketplace-container">
@@ -232,7 +232,7 @@ export default function Marketplace({
         onClose={() => setIsCheckoutOpen(false)}
         cart={cart}
         user={user}
-        onPurchaseComplete={onPurchaseComplete}
+        onPurchaseComplete={handleComplete}
         onClearCart={clearCart}
       />
 

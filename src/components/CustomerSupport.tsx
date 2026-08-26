@@ -1,4 +1,4 @@
-import { Phone, MessageSquare, HelpCircle, X, Check } from 'lucide-react';
+import { HelpCircle, X, Check } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, FormEvent } from 'react';
+import React, { useState, useEffect, useCallback, FormEvent } from 'react';
 import { Plus, Film, ArrowRight, Trash2, Phone } from 'lucide-react';
 import { UserProfile, MovieTicket, TicketPurchase } from '../types';
 import { db } from '../lib/db';
@@ -182,7 +182,7 @@ export default function ProducerDashboard({
     }
   };
 
-  const loadProducerData = async () => {
+  const loadProducerData = useCallback(async () => {
     try {
       const allTickets = await db.getTickets();
       const myTickets = allTickets.filter((t) => t.producerId === user.id);
@@ -193,7 +193,7 @@ export default function ProducerDashboard({
     } catch (e: unknown) {
       logger.error('Error loading producer dashboard data', 'ProducerDashboard', e);
     }
-  };
+  }, [user.id]);
 
   useEffect(() => {
     loadProducerData();
@@ -217,7 +217,7 @@ export default function ProducerDashboard({
       };
       autoGenerate();
     }
-  }, [user.id, user.paystackSubaccountCode]);
+  }, [user, onTicketCreated, loadProducerData]);
 
   const handleDeleteTicket = async (id: string) => {
     setIsDeleting(id);
@@ -311,6 +311,18 @@ export default function ProducerDashboard({
           </button>
         </div>
       </div>
+
+      {(error || success) && (
+        <div
+          className={`p-4 rounded-xl border text-xs font-semibold ${
+            error
+              ? 'bg-red-950/60 border-red-500/30 text-red-300'
+              : 'bg-emerald-950/60 border-emerald-500/30 text-emerald-300'
+          }`}
+        >
+          {error || success}
+        </div>
+      )}
 
       {/* OVERALL EARNINGS & SALES SUMMARY */}
       <MetricsOverview

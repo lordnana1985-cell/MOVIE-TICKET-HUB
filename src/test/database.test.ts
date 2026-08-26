@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { db } from '../lib/db';
-import { MovieTicket, UserProfile, TicketPurchase } from '../types';
+import { MovieTicket, UserProfile } from '../types';
 
 describe('Database Layer - Core Data Operations & Predictable State', () => {
   beforeEach(() => {

@@ -1,10 +1,21 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
 import CheckoutFlow from './CheckoutFlow';
 import { UserProfile, MovieTicket } from '../../types';
+import { db } from '../../lib/db';
+
+vi.mock('../../lib/db', () => ({
+  db: {
+    purchaseTicket: vi.fn().mockResolvedValue({}),
+  },
+}));
 
 describe('CheckoutFlow Component', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   const mockUser: UserProfile = {
     id: 'usr-1',
     email: 'buyer@example.com',
@@ -49,5 +60,16 @@ describe('CheckoutFlow Component', () => {
   it('does not render when isOpen is false', () => {
     const { container } = render(<CheckoutFlow {...defaultProps} isOpen={false} />);
     expect(container.firstChild).toBeNull();
+  });
+
+  it('handles simulated payment confirmation successfully', async () => {
+    render(<CheckoutFlow {...defaultProps} />);
+    const payBtn = screen.getByRole('button', { name: /Complete Simulated Payment/i });
+    expect(payBtn).toBeInTheDocument();
+    fireEvent.click(payBtn);
+
+    await waitFor(() => {
+      expect(db.purchaseTicket).toHaveBeenCalled();
+    });
   });
 });

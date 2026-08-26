@@ -1,25 +1,22 @@
 import React, { useState, FormEvent } from 'react';
-import { Film, MapPin, Calendar, Clock, ExternalLink, Plus, Eye, X } from 'lucide-react';
+import { Film, Eye } from 'lucide-react';
 import { UserProfile, MovieTicket } from '../../types';
 import { db, getSupabaseLastError, clearSupabaseLastError } from '../../lib/db';
 import { useAssetUpload } from '../../hooks/useAssetUpload';
 import TicketFormPreview from './TicketFormPreview';
 import TicketMediaSection from './TicketMediaSection';
+import TicketFormFields from './TicketFormFields';
+import TicketFormNotice from './TicketFormNotice';
 
 export const TEMPLATE_COVERS = [
-  // Movie / Cinema
   'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&q=80&w=600',
   'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&q=80&w=600',
-  // Music Concerts
   'https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&q=80&w=600',
   'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&q=80&w=600',
-  // Beauty Pageants
   'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&q=80&w=600',
   'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80&w=600',
-  // Campus Events
   'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&q=80&w=600',
   'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=600',
-  // Others
   'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&q=80&w=600',
 ];
 
@@ -55,17 +52,11 @@ export default function TicketForm({ user, onClose, onSuccess }: TicketFormProps
 
   const handleCategoryChange = (val: 'movie' | 'music' | 'beauty' | 'campus' | 'other') => {
     setCategory(val);
-    if (val === 'movie') {
-      setSelectedCover(TEMPLATE_COVERS[0]);
-    } else if (val === 'music') {
-      setSelectedCover(TEMPLATE_COVERS[2]);
-    } else if (val === 'beauty') {
-      setSelectedCover(TEMPLATE_COVERS[4]);
-    } else if (val === 'campus') {
-      setSelectedCover(TEMPLATE_COVERS[6]);
-    } else {
-      setSelectedCover(TEMPLATE_COVERS[8]);
-    }
+    if (val === 'movie') setSelectedCover(TEMPLATE_COVERS[0]);
+    else if (val === 'music') setSelectedCover(TEMPLATE_COVERS[2]);
+    else if (val === 'beauty') setSelectedCover(TEMPLATE_COVERS[4]);
+    else if (val === 'campus') setSelectedCover(TEMPLATE_COVERS[6]);
+    else setSelectedCover(TEMPLATE_COVERS[8]);
   };
 
   const handleCreateTicket = async (e: FormEvent) => {
@@ -81,7 +72,6 @@ export default function TicketForm({ user, onClose, onSuccess }: TicketFormProps
 
     try {
       const ticketId = `tkt-${Math.random().toString(36).substring(2, 11)}`;
-
       const { coverUrl: finalCoverUrl, trailerUrl: formattedTrailer } =
         await processAndUploadAssets({
           userId: user.id,
@@ -114,12 +104,8 @@ export default function TicketForm({ user, onClose, onSuccess }: TicketFormProps
       };
 
       await db.createTicket(newTicket);
-
       const dbErr = getSupabaseLastError();
-      const isFileCover = coverSource === 'file';
-      const isFileVideo = videoSource === 'file';
 
-      // Reset form
       setTitle('');
       setCategory('movie');
       setDescription('');
@@ -143,21 +129,16 @@ export default function TicketForm({ user, onClose, onSuccess }: TicketFormProps
           onClose();
         }, 6000);
       } else {
-        let msg = 'Event Ticket Generated successfully';
-        if (isFileCover || isFileVideo) {
-          msg += ' and files successfully uploaded to cloud storage!';
-        } else {
-          msg += '!';
-        }
-        setSuccess(msg);
+        setSuccess('Event Ticket Generated successfully!');
         setTimeout(() => {
           setSuccess('');
           onSuccess();
           onClose();
         }, 2000);
       }
-    } catch (err: any) {
-      setError(`Failed to generate ticket: ${err.message || String(err)}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(`Failed to generate ticket: ${msg}`);
     }
   };
 
@@ -216,188 +197,43 @@ export default function TicketForm({ user, onClose, onSuccess }: TicketFormProps
 
       <form onSubmit={handleCreateTicket} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1.5 font-mono">
-                EVENT CATEGORY *
-              </label>
-              <select
-                value={category}
-                onChange={(e) => handleCategoryChange(e.target.value as any)}
-                className="w-full rounded-xl bg-black/30 border border-white/10 px-4 py-2.5 text-sm text-white focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold font-medium"
-              >
-                <option value="movie" className="bg-slate-950">
-                  Movie Premier / Cinema
-                </option>
-                <option value="music" className="bg-slate-950">
-                  Music Show / Live Concert
-                </option>
-                <option value="beauty" className="bg-slate-950">
-                  Beauty Pageant Show
-                </option>
-                <option value="campus" className="bg-slate-950">
-                  Campus Event / Student Show
-                </option>
-                <option value="other" className="bg-slate-950">
-                  Other Shows / Live Events
-                </option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1.5 font-mono">
-                {category === 'movie'
-                  ? 'MOVIE TITLE *'
-                  : category === 'music'
-                    ? 'MUSIC SHOW TITLE *'
-                    : category === 'beauty'
-                      ? 'BEAUTY PAGEANT TITLE *'
-                      : category === 'campus'
-                        ? 'CAMPUS EVENT TITLE *'
-                        : 'EVENT TITLE *'}
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="Enter event title..."
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full rounded-xl bg-black/30 border border-white/10 px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1.5 font-mono">
-                {category === 'movie' ? 'PREMIERE DESCRIPTION / SYNOPSIS *' : 'EVENT DESCRIPTION *'}
-              </label>
-              <textarea
-                required
-                rows={4}
-                placeholder="Provide a compelling description for attendees and ticket buyers..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full rounded-xl bg-black/30 border border-white/10 px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-gold focus:outline-none"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-300 mb-1.5 font-mono">
-                  TICKET PRICE (GH₵ GHS) *
-                </label>
-                <input
-                  type="number"
-                  required
-                  min={5}
-                  value={price}
-                  onChange={(e) => setPrice(Number(e.target.value))}
-                  className="w-full rounded-xl bg-black/30 border border-white/10 px-4 py-2.5 text-sm text-white focus:border-gold focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-300 mb-1.5 font-mono">
-                  TOTAL TICKET COUNT *
-                </label>
-                <input
-                  type="number"
-                  required
-                  min={1}
-                  value={totalQuantity}
-                  onChange={(e) => setTotalQuantity(Number(e.target.value))}
-                  className="w-full rounded-xl bg-black/30 border border-white/10 px-4 py-2.5 text-sm text-white focus:border-gold focus:outline-none"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1.5 font-mono">
-                EVENT VENUE *
-              </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                  <MapPin className="h-4 w-4" />
-                </span>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Silverbird Cinemas, Accra Mall, Accra"
-                  value={venue}
-                  onChange={(e) => setVenue(e.target.value)}
-                  className="w-full rounded-xl bg-black/30 border border-white/10 px-4 py-2.5 pl-10 text-sm text-white placeholder-gray-500 focus:border-gold focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-300 mb-1.5 font-mono">
-                  DATE *
-                </label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                    <Calendar className="h-4 w-4" />
-                  </span>
-                  <input
-                    type="date"
-                    required
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full rounded-xl bg-black/30 border border-white/10 px-4 py-2.5 pl-10 text-sm text-white focus:border-gold focus:outline-none"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-300 mb-1.5 font-mono">
-                  TIME *
-                </label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                    <Clock className="h-4 w-4" />
-                  </span>
-                  <input
-                    type="time"
-                    required
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                    className="w-full rounded-xl bg-black/30 border border-white/10 px-4 py-2.5 pl-10 text-sm text-white focus:border-gold focus:outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <TicketMediaSection
-              trailerUrl={trailerUrl}
-              setTrailerUrl={setTrailerUrl}
-              videoSource={videoSource}
-              setVideoSource={setVideoSource}
-              videoFile={videoFile}
-              setVideoFile={setVideoFile}
-              coverSource={coverSource}
-              setCoverSource={setCoverSource}
-              selectedCover={selectedCover}
-              setSelectedCover={setSelectedCover}
-              customCover={customCover}
-              setCustomCover={setCustomCover}
-              coverFile={coverFile}
-              setCoverFile={setCoverFile}
-            />
-          </div>
+          <TicketFormFields
+            category={category}
+            onCategoryChange={handleCategoryChange}
+            title={title}
+            onTitleChange={setTitle}
+            description={description}
+            onDescriptionChange={setDescription}
+            price={price}
+            onPriceChange={setPrice}
+            totalQuantity={totalQuantity}
+            onTotalQuantityChange={setTotalQuantity}
+            venue={venue}
+            onVenueChange={setVenue}
+            date={date}
+            onDateChange={setDate}
+            time={time}
+            onTimeChange={setTime}
+          />
+          <TicketMediaSection
+            trailerUrl={trailerUrl}
+            setTrailerUrl={setTrailerUrl}
+            videoSource={videoSource}
+            setVideoSource={setVideoSource}
+            videoFile={videoFile}
+            setVideoFile={setVideoFile}
+            coverSource={coverSource}
+            setCoverSource={setCoverSource}
+            selectedCover={selectedCover}
+            setSelectedCover={setSelectedCover}
+            customCover={customCover}
+            setCustomCover={setCustomCover}
+            coverFile={coverFile}
+            setCoverFile={setCoverFile}
+          />
         </div>
 
-        <div className="rounded-xl bg-white/5 border border-white/10 p-4 flex items-start gap-3">
-          <div className="rounded-full bg-gold/10 p-2 border border-gold/20 text-gold text-xs shrink-0 font-bold font-mono">
-            80 / 20
-          </div>
-          <div className="text-xs">
-            <span className="font-bold text-white block">Automatic Revenue Split Enabled</span>
-            Upon successful ticket purchases through Paystack, you receive{' '}
-            <strong className="text-gold">80% of earnings</strong> directly into your account
-            balance, while <strong className="text-sky-light">20% commission</strong> is routed back
-            to ETH (Event Ticket Hub).
-          </div>
-        </div>
+        <TicketFormNotice />
 
         <div className="flex justify-end gap-3">
           <button
@@ -421,28 +257,7 @@ export default function TicketForm({ user, onClose, onSuccess }: TicketFormProps
             disabled={isUploading}
             className="rounded-xl bg-gradient-to-r from-gold via-gold to-gold-dark px-6 py-3 text-sm font-bold text-black hover:brightness-105 shadow-md shadow-gold/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            {isUploading ? (
-              <>
-                <svg className="animate-spin h-4 w-4 text-black" fill="none" viewBox="0 0 24 24">
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
-                </svg>
-                <span>Uploading Assets...</span>
-              </>
-            ) : (
-              <span>Generate Premier Ticket</span>
-            )}
+            {isUploading ? <span>Uploading Assets...</span> : <span>Generate Premier Ticket</span>}
           </button>
         </div>
       </form>

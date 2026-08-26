@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { UserProfile, MovieTicket } from '../../types';
+import { MovieTicket } from '../../types';
 import { DEFAULT_MOVIES, DEFAULT_USERS, DEFAULT_PURCHASES } from './mockData';
 import { logger } from '../logger';
 import { SupabaseError } from '../errors';
@@ -122,12 +122,16 @@ function dispatchGlobalChange() {
     window.dispatchEvent(new CustomEvent('mt_hub_tickets_changed'));
     try {
       localStorage.setItem('mt_hub_tickets_changed_ts', Date.now().toString());
-    } catch (e) {}
+    } catch {
+      // Ignore local storage error
+    }
   }
   if (globalChannel) {
     try {
       globalChannel.postMessage({ type: 'mt_hub_tickets_changed', timestamp: Date.now() });
-    } catch (e) {}
+    } catch {
+      // Ignore broadcast channel error
+    }
   }
 }
 

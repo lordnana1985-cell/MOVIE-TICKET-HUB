@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { UserProfile, MovieTicket, TicketPurchase } from '../../types';
 import { db } from '../../lib/db';
 import PaystackCheckout, { PaystackStep } from './PaystackCheckout';

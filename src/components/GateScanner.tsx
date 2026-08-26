@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   ScanLine,
   Camera,
@@ -73,11 +73,7 @@ export default function GateScanner({ user }: GateScannerProps) {
     }, 1200);
   };
 
-  useEffect(() => {
-    loadLogsAndTickets();
-  }, [user.id]);
-
-  const loadLogsAndTickets = async () => {
+  const loadLogsAndTickets = useCallback(async () => {
     try {
       const allPurchases = await db.getPurchasesForProducer(user.id);
       setPurchasableTickets(allPurchases);
@@ -87,7 +83,11 @@ export default function GateScanner({ user }: GateScannerProps) {
     } catch (e) {
       logger.error('Failed to load tickets or gate logs', 'GateScanner', e);
     }
-  };
+  }, [user.id]);
+
+  useEffect(() => {
+    loadLogsAndTickets();
+  }, [loadLogsAndTickets]);
 
   const handleAuthenticate = async (codeToAuth?: string) => {
     const code = (codeToAuth || ticketCode).trim();
@@ -98,7 +98,7 @@ export default function GateScanner({ user }: GateScannerProps) {
       setScanResult(result);
       setTicketCode('');
       loadLogsAndTickets();
-    } catch (e) {
+    } catch {
       setScanResult({
         success: false,
         message: 'An error occurred during gate verification. Please retry.',

@@ -39,12 +39,36 @@ describe('SignUpForm Component', () => {
     expect(screen.getByPlaceholderText(/e\.g\. Sync Cinema Studios/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/e\.g\. \+234 803 123 4567/i)).toBeInTheDocument();
     expect(screen.getByRole('combobox')).toBeInTheDocument();
+
+    const compInput = screen.getByPlaceholderText(/e\.g\. Sync Cinema Studios/i);
+    fireEvent.change(compInput, { target: { value: 'Silverbird Studio' } });
+    expect(defaultProps.setCompanyName).toHaveBeenCalledWith('Silverbird Studio');
+
+    const phoneInput = screen.getByPlaceholderText(/e\.g\. \+234 803 123 4567/i);
+    fireEvent.change(phoneInput, { target: { value: '+233201234567' } });
+    expect(defaultProps.setPhoneNumber).toHaveBeenCalledWith('+233201234567');
+
+    const bankSelect = screen.getByRole('combobox');
+    fireEvent.change(bankSelect, { target: { value: 'MTN' } });
+    expect(defaultProps.setSelectedBankCode).toHaveBeenCalledWith('MTN');
   });
 
-  it('updates form fields on input', () => {
+  it('updates form fields on input and toggles password visibility', () => {
     render(<SignUpForm {...defaultProps} />);
     const nameInput = screen.getByPlaceholderText(/e\.g\. Christopher Nolan/i);
     fireEvent.change(nameInput, { target: { value: 'Jane Doe' } });
     expect(defaultProps.setName).toHaveBeenCalledWith('Jane Doe');
+
+    const emailInput = screen.getByPlaceholderText(/e\.g\. yourname@domain\.com/i);
+    fireEvent.change(emailInput, { target: { value: 'jane@example.com' } });
+    expect(defaultProps.setEmail).toHaveBeenCalledWith('jane@example.com');
+
+    const passInput = screen.getByPlaceholderText(/••••••••/i);
+    fireEvent.change(passInput, { target: { value: 'SecretPassword123' } });
+    expect(defaultProps.setPassword).toHaveBeenCalledWith('SecretPassword123');
+
+    const submitBtn = screen.getByRole('button', { name: /Register Account/i });
+    fireEvent.click(submitBtn);
+    expect(defaultProps.onSubmit).toHaveBeenCalled();
   });
 });

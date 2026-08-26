@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useAuthForm } from './useAuthForm';
-import { db, supabase } from '../lib/db';
+import { db } from '../lib/db';
 
 vi.mock('../lib/db', () => ({
   db: {

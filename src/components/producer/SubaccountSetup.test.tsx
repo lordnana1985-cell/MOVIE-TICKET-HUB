@@ -51,16 +51,28 @@ describe('SubaccountSetup Component', () => {
     expect(screen.getByText(/80\/20 Payout Subaccount/i)).toBeInTheDocument();
     expect(screen.getByText('ACTIVE')).toBeInTheDocument();
     expect(screen.getByText('ACCT_test123')).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /Edit Payout Settlement Bank/i })
-    ).toBeInTheDocument();
+    const editBtn = screen.getByRole('button', { name: /Edit Payout Settlement Bank/i });
+    expect(editBtn).toBeInTheDocument();
+    fireEvent.click(editBtn);
+    expect(defaultProps.setIsEditingSubaccount).toHaveBeenCalledWith(true);
   });
 
-  it('renders form inputs when in editing mode', () => {
+  it('renders form inputs when in editing mode and triggers callbacks', () => {
     render(<SubaccountSetup {...defaultProps} isEditingSubaccount={true} />);
     expect(screen.getByText(/Settlement Currency & Bank Location/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/e\.g\. Silverbird Cinemas/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Register & Link Account/i })).toBeInTheDocument();
+
+    const nameInput = screen.getByPlaceholderText(/e\.g\. Silverbird Cinemas/i);
+    fireEvent.change(nameInput, { target: { value: 'New Cinema Studio' } });
+    expect(defaultProps.setSetupBusinessName).toHaveBeenCalledWith('New Cinema Studio');
+
+    const accInput = screen.getByPlaceholderText(/e\.g\. 0123456789/i);
+    fireEvent.change(accInput, { target: { value: '9876543210' } });
+    expect(defaultProps.setSetupAccountNumber).toHaveBeenCalledWith('9876543210');
+
+    const submitBtn = screen.getByRole('button', { name: /Register & Link Account/i });
+    expect(submitBtn).toBeInTheDocument();
+    fireEvent.click(submitBtn);
+    expect(defaultProps.handleCreateSubaccount).toHaveBeenCalled();
   });
 
   it('renders verification code input when showVerificationInput is true', () => {
@@ -73,7 +85,14 @@ describe('SubaccountSetup Component', () => {
       />
     );
     expect(screen.getByText(/Secure Account Verification/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/e\.g\. 1234/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Verify & Save Changes/i })).toBeInTheDocument();
+    const codeInput = screen.getByPlaceholderText(/e.g. 1234/i);
+    expect(codeInput).toBeInTheDocument();
+    fireEvent.change(codeInput, { target: { value: '5678' } });
+    expect(defaultProps.setUserEnteredCode).toHaveBeenCalledWith('5678');
+
+    const verifyBtn = screen.getByRole('button', { name: /Verify & Save Changes/i });
+    expect(verifyBtn).toBeInTheDocument();
+    fireEvent.click(verifyBtn);
+    expect(defaultProps.handleCreateSubaccount).toHaveBeenCalled();
   });
 });

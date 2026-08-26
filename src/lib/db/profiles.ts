@@ -11,24 +11,27 @@ import {
 import { deleteTicket } from './tickets';
 import { logger } from '../logger';
 import { DbError } from './errors';
+import {
+  supabaseCheckEmailExists,
+  supabaseCheckEmailOppositeRole,
+  supabaseInsertProfile,
+  supabaseLoginProfile,
+  supabaseGetProfile,
+  supabaseUpdateProfile,
+  supabaseGetAllProfiles,
+  supabaseDeleteProfile,
+} from './profiles.supabase';
 
 export async function checkEmailExists(email: string): Promise<boolean> {
   const cleanEmail = email.trim().toLowerCase();
-  if (isSupabaseConfigured && supabase) {
-    try {
-      const { data, error } = await supabase.from('profiles').select('id').eq('email', cleanEmail);
-
-      if (error && error.code !== 'PGRST116') throw error;
-
-      if (data && data.length > 0) {
-        return true;
-      }
-    } catch (e: unknown) {
-      const dbErr = DbError.fromError('checkEmailExists', e, true);
-      logger.debug('Supabase email exists check failed, falling back to LocalStorage', 'profiles', {
-        error: dbErr.message,
-      });
-    }
+  try {
+    const remoteExists = await supabaseCheckEmailExists(cleanEmail);
+    if (remoteExists === true) return true;
+  } catch (e: unknown) {
+    const dbErr = DbError.fromError('checkEmailExists', e, true);
+    logger.warn('Supabase email exists check failed, falling back to LocalStorage', 'profiles', {
+      error: dbErr.message,
+    });
   }
 
   const users = getLocalData<UserProfile[]>('users', []);
@@ -40,79 +43,34 @@ export async function checkEmailOppositeRole(
   role: UserRole
 ): Promise<string | null> {
   const otherRole: UserRole = role === 'producer' ? 'buyer' : 'producer';
-
-  if (isSupabaseConfigured && supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('email', email.trim().toLowerCase());
-
-      if (error && error.code !== 'PGRST116') throw error;
-
-      if (data && data.length > 0) {
-        const hasOther = data.some((d) => d.role === otherRole);
-        if (hasOther) {
-          return otherRole;
-        }
-      }
-    } catch (e: unknown) {
-      const dbErr = DbError.fromError('checkEmailOppositeRole', e, true);
-      logger.debug(
-        'Supabase opposite role check failed, falling back to LocalStorage',
-        'profiles',
-        { error: dbErr.message }
-      );
-    }
+  try {
+    const remoteOpposite = await supabaseCheckEmailOppositeRole(email, role);
+    if (remoteOpposite) return remoteOpposite;
+  } catch (e: unknown) {
+    const dbErr = DbError.fromError('checkEmailOppositeRole', e, true);
+    logger.warn('Supabase opposite role check failed, falling back to LocalStorage', 'profiles', {
+      error: dbErr.message,
+    });
   }
 
   const users = getLocalData<UserProfile[]>('users', []);
   const foundOther = users.find(
     (u) => u.email.toLowerCase() === email.trim().toLowerCase() && u.role === otherRole
   );
-  if (foundOther) {
-    return otherRole;
-  }
-
-  return null;
+  return foundOther ? otherRole : null;
 }
 
 export async function registerUser(profile: Omit<UserProfile, 'balance'>): Promise<UserProfile> {
   const fullProfile: UserProfile = { ...profile, balance: 0 };
 
-  if (isSupabaseConfigured && supabase) {
-    try {
-      try {
-        await supabase
-          .from('profiles')
-          .delete()
-          .eq('email', fullProfile.email.trim().toLowerCase());
-      } catch (delErr: unknown) {
-        logger.debug('Failed to delete potentially orphaned profile', 'profiles', { delErr });
-      }
-
-      const { error } = await supabase.from('profiles').insert([
-        {
-          id: fullProfile.id,
-          email: fullProfile.email.trim().toLowerCase(),
-          role: fullProfile.role,
-          name: fullProfile.name,
-          company_name: fullProfile.companyName,
-          phone_number: fullProfile.phoneNumber,
-          settlement_bank: fullProfile.settlementBank,
-          account_number: fullProfile.accountNumber,
-          business_name: fullProfile.companyName,
-          balance: 0,
-        },
-      ]);
-      if (error) throw error;
-    } catch (e: unknown) {
-      const dbErr = DbError.fromError('registerUser', e, true);
-      setSupabaseLastError(dbErr.message);
-      logger.debug('Supabase registration failed, falling back to LocalStorage', 'profiles', {
-        error: dbErr.message,
-      });
-    }
+  try {
+    await supabaseInsertProfile(fullProfile);
+  } catch (e: unknown) {
+    const dbErr = DbError.fromError('registerUser', e, true);
+    setSupabaseLastError(dbErr.message);
+    logger.error('Supabase registration write failed, falling back to LocalStorage', 'profiles', {
+      error: dbErr.message,
+    });
   }
 
   const users = getLocalData<UserProfile[]>('users', []);
@@ -127,70 +85,22 @@ export async function registerUser(profile: Omit<UserProfile, 'balance'>): Promi
 }
 
 export async function loginUser(email: string, role: UserRole): Promise<UserProfile | null> {
-  if (isSupabaseConfigured && supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('email', email.trim().toLowerCase());
-      if (error) throw error;
-
-      if (data && data.length > 0) {
-        const hasAdminProfile = data.find((p) => p.role === 'admin');
-        let matchedProfile = hasAdminProfile || data.find((p) => p.role === role);
-
-        if (!matchedProfile) {
-          if (role === 'admin') {
-            return null;
-          }
-
-          const existing = data[0];
-          const { data: updated, error: updateErr } = await supabase
-            .from('profiles')
-            .update({ role: role })
-            .eq('id', existing.id)
-            .select()
-            .single();
-          if (updateErr) throw updateErr;
-          matchedProfile = updated;
-        }
-
-        if (matchedProfile) {
-          return {
-            id: matchedProfile.id,
-            email: matchedProfile.email,
-            role: matchedProfile.role as UserRole,
-            name: matchedProfile.name,
-            companyName: matchedProfile.company_name,
-            phoneNumber: matchedProfile.phone_number,
-            balance: Number(matchedProfile.balance || 0),
-            paystackSubaccountCode: matchedProfile.paystack_subaccount_code,
-            settlementBank: matchedProfile.settlement_bank,
-            accountNumber: matchedProfile.account_number,
-            businessName: matchedProfile.business_name,
-          };
-        }
-      }
-    } catch (e: unknown) {
-      const dbErr = DbError.fromError('loginUser', e, true);
-      setSupabaseLastError(dbErr.message);
-      logger.debug(
-        'Supabase login/role transition failed, falling back to LocalStorage',
-        'profiles',
-        { error: dbErr.message }
-      );
-    }
+  try {
+    const remoteUser = await supabaseLoginProfile(email, role);
+    if (remoteUser) return remoteUser;
+  } catch (e: unknown) {
+    const dbErr = DbError.fromError('loginUser', e, true);
+    setSupabaseLastError(dbErr.message);
+    logger.warn('Supabase login failed, falling back to LocalStorage', 'profiles', {
+      error: dbErr.message,
+    });
   }
 
   const users = getLocalData<UserProfile[]>('users', []);
   const found = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
   if (found) {
-    if (found.role === 'admin') {
-      return found;
-    }
-    if (role === 'admin') {
-      return null;
-    }
+    if (found.role === 'admin') return found;
+    if (role === 'admin') return null;
     if (found.role !== role) {
       found.role = role;
       setLocalData('users', users);
@@ -201,75 +111,32 @@ export async function loginUser(email: string, role: UserRole): Promise<UserProf
 }
 
 export async function getUserProfile(id: string): Promise<UserProfile | null> {
-  let supabaseProfile: UserProfile | null = null;
-  let fetchSucceeded = false;
-
-  if (isSupabaseConfigured && supabase) {
-    try {
-      const { data, error } = await supabase.from('profiles').select('*').eq('id', id).single();
-      if (error) throw error;
-      if (data) {
-        supabaseProfile = {
-          id: data.id,
-          email: data.email,
-          role: data.role as UserRole,
-          name: data.name,
-          companyName: data.company_name,
-          phoneNumber: data.phone_number,
-          balance: Number(data.balance || 0),
-          paystackSubaccountCode: data.paystack_subaccount_code,
-          settlementBank: data.settlement_bank,
-          accountNumber: data.account_number,
-          businessName: data.business_name,
-        };
-        fetchSucceeded = true;
-      }
-    } catch (e: unknown) {
-      const dbErr = DbError.fromError('getUserProfile', e, true);
-      setSupabaseLastError(dbErr.message);
-      logger.debug('Supabase profile fetch failed, falling back to LocalStorage', 'profiles', {
-        error: dbErr.message,
-      });
-    }
+  try {
+    const remoteProfile = await supabaseGetProfile(id);
+    if (remoteProfile) return remoteProfile;
+  } catch (e: unknown) {
+    const dbErr = DbError.fromError('getUserProfile', e, true);
+    setSupabaseLastError(dbErr.message);
+    logger.warn('Supabase profile fetch failed, falling back to LocalStorage', 'profiles', {
+      error: dbErr.message,
+    });
   }
 
   const users = getLocalData<UserProfile[]>('users', []);
-  const localProfile = users.find((u) => u.id === id) || null;
-
-  if (fetchSucceeded && supabaseProfile) {
-    return supabaseProfile;
-  }
-  return localProfile;
+  return users.find((u) => u.id === id) || null;
 }
 
 export async function updateUserProfile(
   id: string,
   updates: Partial<UserProfile>
 ): Promise<UserProfile | null> {
-  if (isSupabaseConfigured && supabase) {
-    try {
-      const dbUpdates: Record<string, unknown> = {};
-      if (updates.name !== undefined) dbUpdates.name = updates.name;
-      if (updates.companyName !== undefined) dbUpdates.company_name = updates.companyName;
-      if (updates.phoneNumber !== undefined) dbUpdates.phone_number = updates.phoneNumber;
-      if (updates.balance !== undefined) dbUpdates.balance = updates.balance;
-      if (updates.paystackSubaccountCode !== undefined)
-        dbUpdates.paystack_subaccount_code = updates.paystackSubaccountCode;
-      if (updates.settlementBank !== undefined) dbUpdates.settlement_bank = updates.settlementBank;
-      if (updates.accountNumber !== undefined) dbUpdates.account_number = updates.accountNumber;
-      if (updates.businessName !== undefined) dbUpdates.business_name = updates.businessName;
-
-      const { error } = await supabase.from('profiles').update(dbUpdates).eq('id', id);
-
-      if (error) throw error;
-    } catch (e: unknown) {
-      const dbErr = DbError.fromError('updateUserProfile', e, true);
-      logger.debug(
-        'Supabase profile update failed or column missing, updating LocalStorage',
-        'profiles',
-        { error: dbErr.message }
-      );
-    }
+  try {
+    await supabaseUpdateProfile(id, updates);
+  } catch (e: unknown) {
+    const dbErr = DbError.fromError('updateUserProfile', e, true);
+    logger.warn('Supabase profile update failed, updating LocalStorage fallback', 'profiles', {
+      error: dbErr.message,
+    });
   }
 
   const users = getLocalData<UserProfile[]>('users', []);
@@ -295,18 +162,9 @@ export async function updateUserProfile(
 export async function generatePaystackSubaccount(
   userOrId: UserProfile | string
 ): Promise<string | null> {
-  let user: UserProfile | null = null;
-  if (typeof userOrId === 'string') {
-    user = await getUserProfile(userOrId);
-  } else {
-    user = userOrId;
-  }
-
+  const user = typeof userOrId === 'string' ? await getUserProfile(userOrId) : userOrId;
   if (!user) return null;
-
-  if (user.paystackSubaccountCode) {
-    return user.paystackSubaccountCode;
-  }
+  if (user.paystackSubaccountCode) return user.paystackSubaccountCode;
 
   try {
     const businessName = user.companyName || user.name || `Producer ${user.id}`;
@@ -318,7 +176,6 @@ export async function generatePaystackSubaccount(
     }
 
     let subaccountCode: string | null = null;
-
     try {
       const res = await fetch('/api/paystack/subaccount', {
         method: 'POST',
@@ -338,7 +195,7 @@ export async function generatePaystackSubaccount(
         }
       }
     } catch {
-      // In offline/test environments, fetch will fail gracefully
+      // offline / test environment fallback
     }
 
     if (!subaccountCode) {
@@ -354,7 +211,7 @@ export async function generatePaystackSubaccount(
     return subaccountCode;
   } catch (err: unknown) {
     const dbErr = DbError.fromError('generatePaystackSubaccount', err);
-    logger.error('[Auto-Subaccount] Error generating subaccount', 'profiles', dbErr);
+    logger.error('Error generating subaccount', 'profiles', dbErr);
   }
   return null;
 }
@@ -367,9 +224,7 @@ export async function checkUserEmailConfirmed(): Promise<boolean> {
         error,
       } = await supabase.auth.getUser();
       if (error) throw error;
-      if (user) {
-        return !!user.email_confirmed_at;
-      }
+      if (user) return !!user.email_confirmed_at;
     } catch (e: unknown) {
       logger.warn('Error checking user email confirmation status', 'profiles', { error: e });
     }
@@ -398,16 +253,6 @@ export async function resendVerificationEmail(
       const dbErr = DbError.fromError('resendVerificationEmail', e);
       logger.error('Error resending verification email', 'profiles', dbErr);
       const errMsg = e instanceof Error ? e.message : String(e);
-      if (
-        errMsg.toLowerCase().includes('rate limit') ||
-        errMsg.toLowerCase().includes('too many requests')
-      ) {
-        return {
-          success: false,
-          message:
-            'Email rate limit exceeded. Please check your spam/junk folder for the previous email, or wait a few minutes before trying again.',
-        };
-      }
       return { success: false, message: errMsg || 'Failed to resend verification email.' };
     }
   }
@@ -416,37 +261,13 @@ export async function resendVerificationEmail(
 
 export async function getAllProfiles(): Promise<UserProfile[]> {
   let supabaseProfiles: UserProfile[] = [];
-  let fetchSucceeded = false;
-
-  if (isSupabaseConfigured && supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      if (data) {
-        supabaseProfiles = data.map((p) => ({
-          id: p.id,
-          email: p.email,
-          role: p.role as UserRole,
-          name: p.name || p.email.split('@')[0],
-          companyName: p.company_name,
-          phoneNumber: p.phone_number,
-          balance: Number(p.balance || 0),
-          paystackSubaccountCode: p.paystack_subaccount_code,
-          settlementBank: p.settlement_bank,
-          accountNumber: p.account_number,
-          businessName: p.business_name,
-        }));
-        fetchSucceeded = true;
-      }
-    } catch (e: unknown) {
-      const dbErr = DbError.fromError('getAllProfiles', e, true);
-      logger.warn('Supabase getAllProfiles failed, falling back to LocalStorage', 'profiles', {
-        error: dbErr.message,
-      });
-    }
+  try {
+    supabaseProfiles = await supabaseGetAllProfiles();
+  } catch (e: unknown) {
+    const dbErr = DbError.fromError('getAllProfiles', e, true);
+    logger.warn('Supabase getAllProfiles failed, falling back to LocalStorage', 'profiles', {
+      error: dbErr.message,
+    });
   }
 
   const localUsers = getLocalData<UserProfile[]>('users', []);
@@ -458,16 +279,11 @@ export async function getAllProfiles(): Promise<UserProfile[]> {
       uniqueLocalUsers.push(u);
     }
   }
-  if (uniqueLocalUsers.length !== localUsers.length) {
-    setLocalData('users', uniqueLocalUsers);
-  }
 
-  if (fetchSucceeded) {
+  if (supabaseProfiles.length > 0) {
     const merged = [...supabaseProfiles];
     for (const lu of uniqueLocalUsers) {
-      if (!merged.some((u) => u.id === lu.id)) {
-        merged.push(lu);
-      }
+      if (!merged.some((u) => u.id === lu.id)) merged.push(lu);
     }
     return merged;
   }
@@ -476,56 +292,40 @@ export async function getAllProfiles(): Promise<UserProfile[]> {
 }
 
 export async function deleteProfile(id: string): Promise<boolean> {
-  if (isSupabaseConfigured && supabase) {
-    try {
-      try {
-        await supabase.from('ticket_purchases').delete().eq('buyer_id', id);
-      } catch (e: unknown) {
-        logger.debug('Silent purchase delete issue during user deletion', 'profiles', { e });
-      }
-
-      try {
-        const { data: tickets } = await supabase
-          .from('movie_tickets')
-          .select('id')
-          .eq('producer_id', id);
-
-        if (tickets && tickets.length > 0) {
-          for (const t of tickets) {
-            await deleteTicket(t.id, true);
-          }
-        }
-      } catch (e: unknown) {
-        logger.debug('Silent ticket assets delete issue during user deletion', 'profiles', { e });
-      }
-
-      const { error } = await supabase.from('profiles').delete().eq('id', id);
-      if (error) throw error;
-    } catch (e: unknown) {
-      const dbErr = DbError.fromError('deleteProfile', e, true);
-      setSupabaseLastError(dbErr.message);
-      logger.warn('Supabase deleteProfile failed, falling back to LocalStorage', 'profiles', {
-        error: dbErr.message,
-      });
-    }
+  try {
+    await supabaseDeleteProfile(id);
+  } catch (e: unknown) {
+    const dbErr = DbError.fromError('deleteProfile', e, true);
+    setSupabaseLastError(dbErr.message);
+    logger.warn('Supabase deleteProfile failed, falling back to LocalStorage', 'profiles', {
+      error: dbErr.message,
+    });
   }
 
   const users = getLocalData<UserProfile[]>('users', []);
-  const filteredUsers = users.filter((u) => u.id !== id);
-  setLocalData('users', filteredUsers);
+  setLocalData(
+    'users',
+    users.filter((u) => u.id !== id)
+  );
 
   const tickets = getLocalData<MovieTicket[]>('tickets', []);
   const producerTickets = tickets.filter((t) => t.producerId === id);
-  producerTickets.forEach((t) => addDeletedTicketId(t.id));
-
-  const filteredTickets = tickets.filter((t) => t.producerId !== id);
-  setLocalData('tickets', filteredTickets);
+  producerTickets.forEach((t) => {
+    addDeletedTicketId(t.id);
+    deleteTicket(t.id, true);
+  });
+  setLocalData(
+    'tickets',
+    tickets.filter((t) => t.producerId !== id)
+  );
 
   const purchases = getLocalData<TicketPurchase[]>('purchases', []);
-  const filteredPurchases = purchases.filter(
-    (p) => p.buyerId !== id && !tickets.some((t) => t.id === p.ticketId && t.producerId === id)
+  setLocalData(
+    'purchases',
+    purchases.filter(
+      (p) => p.buyerId !== id && !tickets.some((t) => t.id === p.ticketId && t.producerId === id)
+    )
   );
-  setLocalData('purchases', filteredPurchases);
 
   notifyTicketsChanged();
   return true;

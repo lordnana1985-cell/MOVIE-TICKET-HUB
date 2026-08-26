@@ -1,14 +1,5 @@
-import { useState, useEffect } from 'react';
-import {
-  Film,
-  Sparkles,
-  ShieldAlert,
-  CheckCircle2,
-  HelpCircle,
-  TrendingUp,
-  Cpu,
-  Tv,
-} from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { UserProfile, MovieTicket, TicketPurchase } from './types';
 import { db, getSupabaseStatus } from './lib/db';
 import { logger } from './lib/logger';
@@ -26,7 +17,7 @@ export default function App() {
     if (savedUser) {
       try {
         return JSON.parse(savedUser);
-      } catch (e) {
+      } catch {
         localStorage.removeItem('mt_hub_current_user');
         return null;
       }
@@ -47,7 +38,7 @@ export default function App() {
           return 'admin_portal';
         }
         return 'marketplace';
-      } catch (e) {
+      } catch {
         return 'auth';
       }
     }
@@ -64,73 +55,17 @@ export default function App() {
     text: string;
   } | null>(null);
 
-  // Sync session and load database items
-  useEffect(() => {
-    reloadData();
-  }, [user?.id]);
-
-  // Real-time listener for ticket updates and deletions across the application
-  useEffect(() => {
-    let debounceTimer: any = null;
-    const handleTicketsChanged = () => {
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
-        reloadData();
-      }, 300);
-    };
-    window.addEventListener('mt_hub_tickets_changed', handleTicketsChanged);
-    return () => {
-      clearTimeout(debounceTimer);
-      window.removeEventListener('mt_hub_tickets_changed', handleTicketsChanged);
-    };
+  const triggerAlert = useCallback((type: 'success' | 'error', text: string) => {
+    setAlertMessage({ type, text });
+    setTimeout(() => setAlertMessage(null), 4000);
   }, []);
 
-  // Real-time listener for secret admin tab toggle
-  useEffect(() => {
-    const handleToggleAdminEvent = () => {
-      const nextState = localStorage.getItem('mt_hub_show_admin_tab') === 'true';
-      if (nextState) {
-        triggerAlert('success', 'Admin Portal Login Option is now VISIBLE on the login screen!');
-      } else {
-        triggerAlert('success', 'Admin Portal Login Option is now HIDDEN from the login screen.');
-      }
-    };
-    window.addEventListener('mt_hub_toggle_admin_tab', handleToggleAdminEvent);
-    return () => {
-      window.removeEventListener('mt_hub_toggle_admin_tab', handleToggleAdminEvent);
-    };
-  }, []);
-
-  // Strict role-based navigation enforcement guard
-  useEffect(() => {
-    if (user) {
-      if (user.role === 'buyer') {
-        if (activeTab !== 'marketplace') {
-          setActiveTab('marketplace');
-        }
-      } else if (user.role === 'producer') {
-        if (activeTab !== 'producer_dashboard' && activeTab !== 'gate_auth') {
-          setActiveTab('producer_dashboard');
-        }
-      } else if (user.role === 'admin') {
-        if (activeTab !== 'admin_portal' && activeTab !== 'marketplace') {
-          setActiveTab('admin_portal');
-        }
-      }
-    } else {
-      if (activeTab !== 'auth') {
-        setActiveTab('auth');
-      }
-    }
-  }, [user?.role, activeTab]);
-
-  const reloadData = async () => {
+  const reloadData = useCallback(async () => {
     try {
       const liveTickets = await db.getTickets();
       setTickets(liveTickets);
 
       if (user) {
-        // Enforce active email verification check if Supabase is configured
         if (getSupabaseStatus().configured) {
           const isEmailConfirmed = await db.checkUserEmailConfirmed();
           if (!isEmailConfirmed) {
@@ -146,7 +81,6 @@ export default function App() {
           }
         }
 
-        // Reload user stats/profile balance too
         const updatedProfile = await db.getUserProfile(user.id);
         if (updatedProfile) {
           setUser((prev) => {
@@ -186,10 +120,71 @@ export default function App() {
           setPurchases(livePurchases);
         }
       }
-    } catch (e: any) {
-      logger.error('Failed to reload data:', 'App', { error: e?.message || e });
+    } catch (e: unknown) {
+      const err = e instanceof Error ? e.message : String(e);
+      logger.error('Failed to reload data:', 'App', { error: err });
     }
-  };
+  }, [user, triggerAlert]);
+
+  // Sync session and load database items
+  useEffect(() => {
+    reloadData();
+  }, [reloadData]);
+
+  // Real-time listener for ticket updates and deletions across the application
+  useEffect(() => {
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const handleTicketsChanged = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        reloadData();
+      }, 300);
+    };
+    window.addEventListener('mt_hub_tickets_changed', handleTicketsChanged);
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      window.removeEventListener('mt_hub_tickets_changed', handleTicketsChanged);
+    };
+  }, [reloadData]);
+
+  // Real-time listener for secret admin tab toggle
+  useEffect(() => {
+    const handleToggleAdminEvent = () => {
+      const nextState = localStorage.getItem('mt_hub_show_admin_tab') === 'true';
+      if (nextState) {
+        triggerAlert('success', 'Admin Portal Login Option is now VISIBLE on the login screen!');
+      } else {
+        triggerAlert('success', 'Admin Portal Login Option is now HIDDEN from the login screen.');
+      }
+    };
+    window.addEventListener('mt_hub_toggle_admin_tab', handleToggleAdminEvent);
+    return () => {
+      window.removeEventListener('mt_hub_toggle_admin_tab', handleToggleAdminEvent);
+    };
+  }, [triggerAlert]);
+
+  // Strict role-based navigation enforcement guard
+  useEffect(() => {
+    if (user) {
+      if (user.role === 'buyer') {
+        if (activeTab !== 'marketplace') {
+          setActiveTab('marketplace');
+        }
+      } else if (user.role === 'producer') {
+        if (activeTab !== 'producer_dashboard' && activeTab !== 'gate_auth') {
+          setActiveTab('producer_dashboard');
+        }
+      } else if (user.role === 'admin') {
+        if (activeTab !== 'admin_portal' && activeTab !== 'marketplace') {
+          setActiveTab('admin_portal');
+        }
+      }
+    } else {
+      if (activeTab !== 'auth') {
+        setActiveTab('auth');
+      }
+    }
+  }, [user, activeTab]);
 
   const handleLogout = () => {
     localStorage.removeItem('mt_hub_current_user');
@@ -202,7 +197,6 @@ export default function App() {
     setUser(profile);
     localStorage.setItem('mt_hub_current_user', JSON.stringify(profile));
 
-    // Redirect producers to their console, buyers stay on market
     if (profile.role === 'producer') {
       setActiveTab('producer_dashboard');
     } else if (profile.role === 'admin') {
@@ -212,11 +206,6 @@ export default function App() {
     }
     reloadData();
     triggerAlert('success', `Welcome back, ${profile.name}!`);
-  };
-
-  const triggerAlert = (type: 'success' | 'error', text: string) => {
-    setAlertMessage({ type, text });
-    setTimeout(() => setAlertMessage(null), 4000);
   };
 
   const handleNavigationChange = (
@@ -231,145 +220,126 @@ export default function App() {
       return;
     }
 
-    // ENFORCE STRICT ROLE ACCESS GUARDS
     if (user.role === 'buyer') {
       if (tab !== 'marketplace' && tab !== 'auth') {
         triggerAlert('error', 'Access Blocked: Buyers are strictly limited to the Marketplace.');
         setActiveTab('marketplace');
         return;
       }
-    } else if (user.role === 'producer') {
-      if (tab !== 'producer_dashboard' && tab !== 'gate_auth' && tab !== 'auth') {
-        triggerAlert('error', 'Access Blocked: Producers are restricted to the Producer Console.');
+    }
+
+    if (user.role === 'producer') {
+      if (tab === 'admin_portal') {
+        triggerAlert('error', 'Access Blocked: Producers cannot access the Admin Portal.');
         setActiveTab('producer_dashboard');
         return;
       }
-    } else if (user.role === 'admin') {
-      if (tab !== 'admin_portal' && tab !== 'marketplace' && tab !== 'auth') {
+    }
+
+    if (user.role === 'admin') {
+      if (tab === 'producer_dashboard' || tab === 'gate_auth') {
         triggerAlert(
           'error',
-          'Access Blocked: Admins are restricted to Admin Portal and Marketplace.'
+          'Notice: Admin accounts should manage events from the Admin Console.'
         );
-        setActiveTab('admin_portal');
-        return;
       }
     }
+
     setActiveTab(tab);
   };
 
-  const openAuthPortal = (role: 'producer' | 'buyer' | 'admin') => {
-    setAuthModalRole(role);
-    setActiveTab('auth');
-  };
-
   return (
-    <div className="min-h-screen bg-[#030712] text-gray-100 flex flex-col relative selection:bg-gold/30 selection:text-white">
-      {/* GLOBAL MOOD GLOW BACKGROUND ORBS */}
-      <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[50%] rounded-full bg-sky-deep/10 blur-[130px] pointer-events-none" />
-      <div className="absolute bottom-[10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-gold/5 blur-[150px] pointer-events-none" />
-
-      {/* HEADER CONTROLLER */}
+    <div className="min-h-screen bg-midnight text-gray-100 flex flex-col font-sans selection:bg-gold/30 selection:text-gold-light">
       <Header
-        user={user}
         activeTab={activeTab}
         setActiveTab={handleNavigationChange}
+        user={user}
         onLogout={handleLogout}
-        onOpenAuth={openAuthPortal}
+        onOpenAuth={(role) => {
+          setAuthModalRole(role);
+          setActiveTab('auth');
+        }}
       />
 
-      {/* FLOATING ALERTS DESPATCHER */}
       {alertMessage && (
-        <div className="fixed top-20 right-6 z-50 max-w-sm rounded-xl glass-panel p-4 shadow-xl border border-white/10 animate-slideLeft">
-          <div className="flex items-start gap-3">
+        <div className="fixed top-20 right-4 z-50 animate-slideDown max-w-md shadow-2xl">
+          <div
+            className={`flex items-center gap-3 p-4 rounded-xl border backdrop-blur-md ${
+              alertMessage.type === 'success'
+                ? 'bg-emerald-950/80 border-emerald-500/30 text-emerald-300'
+                : 'bg-red-950/80 border-red-500/30 text-red-300'
+            }`}
+          >
             {alertMessage.type === 'success' ? (
-              <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+              <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
             ) : (
-              <ShieldAlert className="h-5 w-5 text-gold shrink-0 mt-0.5" />
+              <ShieldAlert className="h-5 w-5 shrink-0 text-red-400" />
             )}
-            <div>
-              <span className="text-xs font-bold text-white block">
-                {alertMessage.type === 'success' ? 'Operation Success' : 'Security Advisory'}
-              </span>
-              <p className="text-xs text-gray-300 mt-1">{alertMessage.text}</p>
-            </div>
+            <span className="text-xs font-semibold leading-relaxed">{alertMessage.text}</span>
           </div>
         </div>
       )}
 
-      {/* MAIN CONTAINER FRAME */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-8 md:px-8 relative z-10">
-        {/* VIEW ROUTER */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {activeTab === 'auth' && (
+          <AuthPage
+            initialRole={authModalRole}
+            onSuccess={handleAuthSuccess}
+            onBackToMarket={() => {
+              if (user) {
+                if (user.role === 'producer') setActiveTab('producer_dashboard');
+                else if (user.role === 'admin') setActiveTab('admin_portal');
+                else setActiveTab('marketplace');
+              } else {
+                triggerAlert(
+                  'error',
+                  'Please sign in or create an account to enter the marketplace.'
+                );
+              }
+            }}
+          />
+        )}
+
         {activeTab === 'marketplace' && (
           <Marketplace
             user={user}
             tickets={tickets}
-            purchases={purchases}
-            onPurchaseComplete={reloadData}
-            onOpenAuth={openAuthPortal}
+            onOpenAuth={(role) => {
+              setAuthModalRole(role);
+              setActiveTab('auth');
+            }}
+            onPurchaseSuccess={() => {
+              reloadData();
+              triggerAlert('success', 'Ticket successfully purchased! View your passes anytime.');
+            }}
           />
         )}
 
         {activeTab === 'producer_dashboard' && user && user.role === 'producer' && (
           <ProducerDashboard
             user={user}
-            onTicketCreated={reloadData}
-            setActiveTab={handleNavigationChange}
+            tickets={tickets.filter((t) => t.producerId === user.id)}
+            purchases={purchases}
+            onTicketCreated={() => {
+              reloadData();
+              triggerAlert('success', 'New Premiere Event published successfully!');
+            }}
+            onOpenGateScanner={() => setActiveTab('gate_auth')}
           />
         )}
 
-        {activeTab === 'admin_portal' && user && user.role === 'admin' && (
-          <AdminPortal user={user} tickets={tickets} onDataChanged={reloadData} />
-        )}
-
         {activeTab === 'gate_auth' && user && user.role === 'producer' && (
-          <GateScanner user={user} />
+          <GateScanner user={user} onBack={() => setActiveTab('producer_dashboard')} />
         )}
 
-        {activeTab === 'auth' && (
-          <AuthPage initialRole={authModalRole} onAuthSuccess={handleAuthSuccess} />
+        {activeTab === 'admin_portal' && user && user.role === 'admin' && (
+          <AdminPortal
+            adminUser={user}
+            onActionNotice={(msg, type) => triggerAlert(type || 'success', msg)}
+          />
         )}
       </main>
 
-      {/* GLOBAL FOOTER */}
-      <footer className="border-t border-white/5 py-8 mt-12 bg-black/40">
-        <div className="mx-auto max-w-7xl px-4 text-center md:px-8 space-y-3">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 py-2 border-b border-white/5 mb-4 text-xs font-mono">
-            <span className="text-gray-400">Need immediate help? Contact Support:</span>
-            <div className="flex items-center gap-4 flex-wrap justify-center">
-              <a
-                href="https://wa.me/233543198585"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 transition-colors"
-              >
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>WhatsApp (0543198585)</span>
-              </a>
-              <span className="text-gray-600 hidden sm:inline">|</span>
-              <a
-                href="tel:0543198585"
-                className="flex items-center gap-1.5 text-sky-light hover:text-sky-300 transition-colors"
-              >
-                <span>Call (0543198585)</span>
-              </a>
-            </div>
-          </div>
-          <p className="text-xs text-gray-500 font-mono tracking-wider">
-            © 2026 EVENT TICKET HUB (ETH) • ALL RIGHTS RESERVED
-          </p>
-          {activeTab !== 'auth' && (
-            <div className="flex justify-center gap-6 text-[10px] font-mono text-gray-400 flex-wrap">
-              <span>SECURED BY PAYSTACK INLINE</span>
-              <span>•</span>
-              <span>SPLIT SYSTEM: 80% ORGANISER / 20% HUB</span>
-              <span>•</span>
-              <span>SUPABASE INTEGRATION CAPABLE</span>
-            </div>
-          )}
-        </div>
-      </footer>
-
-      {/* FLOATING CUSTOMER SUPPORT FAB & MENU */}
       <CustomerSupport />
     </div>
   );

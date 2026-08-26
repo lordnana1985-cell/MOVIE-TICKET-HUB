@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Film, User, LogOut, LayoutDashboard, Store, KeyRound } from 'lucide-react';
+import { Film, LogOut, LayoutDashboard, Store, KeyRound } from 'lucide-react';
 // @ts-ignore
 import logoUrl from '../assets/images/eth_logo_sharp_1783889932234.jpg';
 import { UserProfile } from '../types';

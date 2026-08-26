@@ -1,9 +1,21 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import React from 'react';
 import TicketForm from './TicketForm';
 import { UserProfile } from '../../types';
+import { db } from '../../lib/db';
+
+vi.mock('../../lib/db', () => ({
+  db: {
+    createTicket: vi.fn().mockResolvedValue({ id: 'new-ticket-1' }),
+  },
+}));
 
 describe('TicketForm Component Unit Tests', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   const mockProducer: UserProfile = {
     id: 'prod-123',
     email: 'producer@example.com',
@@ -21,10 +33,9 @@ describe('TicketForm Component Unit Tests', () => {
 
     expect(screen.getByText(/Generate Event Ticket/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/Enter event title\.\.\./i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/Provide a compelling description/i)).toBeInTheDocument();
   });
 
-  it('allows category selection and form field updates', () => {
+  it('allows category selection, form field updates, and cancel click', () => {
     const handleClose = vi.fn();
     const handleSuccess = vi.fn();
 
@@ -37,5 +48,28 @@ describe('TicketForm Component Unit Tests', () => {
     const cancelBtn = screen.getByText('Cancel');
     fireEvent.click(cancelBtn);
     expect(handleClose).toHaveBeenCalled();
+  });
+
+  it('submits ticket form and triggers db.createTicket and onSuccess callback', async () => {
+    const handleClose = vi.fn();
+    const handleSuccess = vi.fn();
+
+    render(<TicketForm user={mockProducer} onClose={handleClose} onSuccess={handleSuccess} />);
+
+    const titleInput = screen.getByPlaceholderText(/Enter event title\.\.\./i);
+    fireEvent.change(titleInput, { target: { value: 'Epic Movie Night' } });
+
+    const descInput = screen.getByPlaceholderText(/Provide a compelling description/i);
+    fireEvent.change(descInput, {
+      target: { value: 'Exclusive premiere with special guest stars' },
+    });
+
+    const submitBtn = screen.getByRole('button', { name: /Generate Premier Ticket/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(db.createTicket).toHaveBeenCalled();
+      expect(handleSuccess).toHaveBeenCalled();
+    });
   });
 });

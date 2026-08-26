@@ -45,8 +45,6 @@ class StructuredLogger {
     if (this.isTest) return;
     const payload = this.format('debug', message, context, data);
     if (this.isDevelopment) {
-      // Clean readable console format in dev
-      // eslint-disable-next-line no-console
       console.debug(`[DEBUG] [${payload.context || 'App'}] ${message}`, data || '');
     }
   }
@@ -54,21 +52,18 @@ class StructuredLogger {
   public info(message: string, context?: string, data?: any): void {
     if (this.isTest) return;
     const payload = this.format('info', message, context, data);
-    // eslint-disable-next-line no-console
     console.log(JSON.stringify(payload));
   }
 
   public warn(message: string, context?: string, data?: any): void {
     if (this.isTest) return;
     const payload = this.format('warn', message, context, data);
-    // eslint-disable-next-line no-console
     console.warn(JSON.stringify(payload));
   }
 
   public error(message: string, context?: string, error?: any, data?: any): void {
     if (this.isTest) return;
     const payload = this.format('error', message, context, data, error);
-    // eslint-disable-next-line no-console
     console.error(JSON.stringify(payload));
   }
 }
