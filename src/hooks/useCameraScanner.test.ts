@@ -55,9 +55,13 @@ describe('useCameraScanner Hook', () => {
 
   it('handles camera permission failure gracefully', async () => {
     const errorCallback = vi.fn();
-    (navigator.mediaDevices.getUserMedia as any).mockRejectedValueOnce(new Error('Permission denied'));
+    (navigator.mediaDevices.getUserMedia as any).mockRejectedValueOnce(
+      new Error('Permission denied')
+    );
 
-    const { result } = renderHook(() => useCameraScanner({ enabled: false, onCameraError: errorCallback }));
+    const { result } = renderHook(() =>
+      useCameraScanner({ enabled: false, onCameraError: errorCallback })
+    );
 
     await act(async () => {
       await result.current.startCamera();

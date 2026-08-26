@@ -21,8 +21,8 @@ export default function MarketplaceHero({ activeScreeningsCount }: MarketplaceHe
           Most Exclusive <span className="text-gold">Movie Premieres</span>
         </h2>
         <p className="text-sm md:text-base text-sky-100/70 max-w-xl leading-relaxed">
-          Secure your premium entrance tickets. Direct and authentic sales splits verified on our cinema
-          ledger and fully integrated with Paystack.
+          Secure your premium entrance tickets. Direct and authentic sales splits verified on our
+          cinema ledger and fully integrated with Paystack.
         </p>
 
         <div className="flex flex-wrap gap-4 pt-2">
@@ -40,7 +40,9 @@ export default function MarketplaceHero({ activeScreeningsCount }: MarketplaceHe
       {/* LOGO HERO CARD */}
       <div className="w-full md:w-80 rounded-2xl bg-black/40 border border-white/10 p-6 backdrop-blur-xl relative z-10 space-y-4">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-mono uppercase tracking-widest text-sky-300">HUB STATUS</span>
+          <span className="text-xs font-mono uppercase tracking-widest text-sky-300">
+            HUB STATUS
+          </span>
           <span className="flex items-center gap-1.5 text-xs text-emerald-400 font-mono">
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
             ONLINE

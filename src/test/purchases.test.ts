@@ -1,5 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { purchaseTicket, getPurchasesForBuyer, getPurchasesForProducer, authenticateTicket, saveGateLog, getGateLogs } from '../lib/db/purchases';
+import {
+  purchaseTicket,
+  getPurchasesForBuyer,
+  getPurchasesForProducer,
+  authenticateTicket,
+  saveGateLog,
+  getGateLogs,
+} from '../lib/db/purchases';
 import { createTicket } from '../lib/db/tickets';
 import { MovieTicket, TicketPurchase, GateLog } from '../types';
 
@@ -24,7 +31,7 @@ describe('purchases db module', () => {
     availableQuantity: 100,
     coverUrl: 'https://images.unsplash.com/test',
     createdAt: new Date().toISOString(),
-    category: 'music'
+    category: 'music',
   };
 
   const samplePurchase: TicketPurchase = {
@@ -40,7 +47,7 @@ describe('purchases db module', () => {
     hubEarning: 40,
     paystackRef: 'pstk_ref_12345',
     purchasedAt: new Date().toISOString(),
-    status: 'unused'
+    status: 'unused',
   };
 
   it('records a purchase with 80/20 revenue split calculations', async () => {
@@ -59,7 +66,7 @@ describe('purchases db module', () => {
     await purchaseTicket({
       ...samplePurchase,
       id: 'purch-buyer-1',
-      buyerId: 'buyer-abc'
+      buyerId: 'buyer-abc',
     });
 
     const buyerPurchases = await getPurchasesForBuyer('buyer-abc');
@@ -71,7 +78,7 @@ describe('purchases db module', () => {
     await createTicket(sampleTicket);
     await purchaseTicket({
       ...samplePurchase,
-      id: 'purch-prod-1'
+      id: 'purch-prod-1',
     });
 
     const producerPurchases = await getPurchasesForProducer('prod-456');
@@ -84,7 +91,7 @@ describe('purchases db module', () => {
     await purchaseTicket({
       ...samplePurchase,
       id: 'purch-gate-test',
-      status: 'unused'
+      status: 'unused',
     });
 
     const validResult = await authenticateTicket('purch-gate-test');
@@ -105,7 +112,7 @@ describe('purchases db module', () => {
       movieTitle: 'Concert Premiere',
       buyerName: 'Jane Buyer',
       scannedAt: new Date().toISOString(),
-      status: 'success'
+      status: 'success',
     };
 
     await saveGateLog(log);

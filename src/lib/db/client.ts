@@ -10,7 +10,7 @@ export const SUPABASE_ANON_KEY = env.VITE_SUPABASE_ANON_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   throw new Error(
-    "Missing Supabase configuration. Please ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables are configured."
+    'Missing Supabase configuration. Please ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables are configured.'
   );
 }
 
@@ -18,20 +18,24 @@ export const supabase: SupabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON
   auth: {
     persistSession: typeof window !== 'undefined',
     autoRefreshToken: false,
-  }
+  },
 });
 export const isSupabaseConfigured = true;
 let lastSupabaseError: string | null = null;
 
 export const getSupabaseLastError = () => lastSupabaseError;
-export const setSupabaseLastError = (err: string | null) => { lastSupabaseError = err; };
-export const clearSupabaseLastError = () => { lastSupabaseError = null; };
+export const setSupabaseLastError = (err: string | null) => {
+  lastSupabaseError = err;
+};
+export const clearSupabaseLastError = () => {
+  lastSupabaseError = null;
+};
 
 export const getSupabaseStatus = () => {
   return {
     configured: isSupabaseConfigured,
     url: SUPABASE_URL,
-    hasKey: !!SUPABASE_ANON_KEY
+    hasKey: !!SUPABASE_ANON_KEY,
   };
 };
 
@@ -67,12 +71,13 @@ export const addDeletedTicketId = (id: string): void => {
 
 export const removeDeletedTicketId = (id: string): void => {
   const ids = getLocalData<string[]>('deleted_ticket_ids', []);
-  const filtered = ids.filter(i => i !== id);
+  const filtered = ids.filter((i) => i !== id);
   setLocalData('deleted_ticket_ids', filtered);
 };
 
 // CROSS-TAB & GLOBAL BROADCAST EVENT HELPER
-export const globalChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('mt_hub_events') : null;
+export const globalChannel =
+  typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('mt_hub_events') : null;
 
 if (globalChannel) {
   globalChannel.onmessage = (event) => {
@@ -135,13 +140,15 @@ if (isSupabaseConfigured && supabase) {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'movie_tickets' },
         (payload) => {
-          logger.info('Realtime movie_tickets event received', 'client', { eventType: payload.eventType });
+          logger.info('Realtime movie_tickets event received', 'client', {
+            eventType: payload.eventType,
+          });
           if (payload.eventType === 'DELETE') {
             const deletedId = payload.old?.id;
             if (deletedId) {
               addDeletedTicketId(deletedId);
               const tickets = getLocalData<MovieTicket[]>('tickets', []);
-              const filtered = tickets.filter(t => t.id !== deletedId);
+              const filtered = tickets.filter((t) => t.id !== deletedId);
               setLocalData('tickets', filtered);
             }
           }
@@ -160,7 +167,7 @@ if (typeof window !== 'undefined' && window.localStorage) {
   const deletedTicketIdsOnBoot = getDeletedTicketIds();
 
   if (!localStorage.getItem('mt_hub_tickets')) {
-    const initialFilteredMovies = DEFAULT_MOVIES.filter(m => !deletedTicketIdsOnBoot.has(m.id));
+    const initialFilteredMovies = DEFAULT_MOVIES.filter((m) => !deletedTicketIdsOnBoot.has(m.id));
     setLocalData('tickets', isCleared ? [] : initialFilteredMovies);
   }
 
@@ -169,14 +176,16 @@ if (typeof window !== 'undefined' && window.localStorage) {
   } else {
     try {
       const existingUsers = JSON.parse(localStorage.getItem('mt_hub_users') || '[]');
-      const hasAdmin = existingUsers.some((u: any) => u.email.toLowerCase() === 'admin@movieticket.com');
+      const hasAdmin = existingUsers.some(
+        (u: any) => u.email.toLowerCase() === 'admin@movieticket.com'
+      );
       if (!hasAdmin && !isCleared) {
         existingUsers.push({
           id: 'admin1',
           email: 'admin@movieticket.com',
           role: 'admin',
           name: 'System Admin',
-          balance: 0
+          balance: 0,
         });
         localStorage.setItem('mt_hub_users', JSON.stringify(existingUsers));
       }
@@ -214,21 +223,28 @@ export async function uploadFile(
           cacheControl: '3600',
           upsert: true,
           contentType: file.type || 'video/mp4',
-          onUploadProgress: onProgress ? (event: any) => {
-            if (event && typeof event.loaded === 'number' && typeof event.total === 'number' && event.total > 0) {
-              const percent = Math.round((event.loaded / event.total) * 100);
-              onProgress(percent);
-            }
-          } : undefined
+          onUploadProgress: onProgress
+            ? (event: any) => {
+                if (
+                  event &&
+                  typeof event.loaded === 'number' &&
+                  typeof event.total === 'number' &&
+                  event.total > 0
+                ) {
+                  const percent = Math.round((event.loaded / event.total) * 100);
+                  onProgress(percent);
+                }
+              }
+            : undefined,
         } as any);
 
       if (error) {
         throw error;
       }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from(bucketName)
-        .getPublicUrl(filePath);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from(bucketName).getPublicUrl(filePath);
 
       return publicUrl;
     } catch (e: any) {
@@ -236,16 +252,20 @@ export async function uploadFile(
       logger.warn('Supabase storage upload failed', 'client', { error: e?.message });
 
       if (!allowFallback) {
-        throw new SupabaseError(`Supabase Storage upload failed: ${e.message || String(e)}. Please check your bucket limits, storage size, and RLS policies.`);
+        throw new SupabaseError(
+          `Supabase Storage upload failed: ${e.message || String(e)}. Please check your bucket limits, storage size, and RLS policies.`
+        );
       }
 
-      logger.warn('Activating automatic Base64 / Local URL fallback for file', 'client', { fileName: file.name });
+      logger.warn('Activating automatic Base64 / Local URL fallback for file', 'client', {
+        fileName: file.name,
+      });
 
       if (onProgress) {
         onProgress(30);
-        await new Promise(resolve => setTimeout(resolve, 150));
+        await new Promise((resolve) => setTimeout(resolve, 150));
         onProgress(70);
-        await new Promise(resolve => setTimeout(resolve, 150));
+        await new Promise((resolve) => setTimeout(resolve, 150));
         onProgress(100);
       }
 
@@ -266,15 +286,17 @@ export async function uploadFile(
       try {
         return URL.createObjectURL(file);
       } catch (urlErr) {
-        throw new Error(`Supabase Storage upload failed: ${e.message || String(e)}. Automatic fallback failed: ${String(urlErr)}`);
+        throw new Error(
+          `Supabase Storage upload failed: ${e.message || String(e)}. Automatic fallback failed: ${String(urlErr)}`
+        );
       }
     }
   } else {
     if (onProgress) {
       onProgress(30);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       onProgress(70);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       onProgress(100);
     }
     try {

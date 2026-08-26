@@ -24,7 +24,7 @@ describe('Database Layer Unit Tests (src/lib/db.test.ts)', () => {
       availableQuantity: 150,
       coverUrl: 'https://images.unsplash.com/photo-premiere',
       createdAt: new Date().toISOString(),
-      category: 'movie'
+      category: 'movie',
     };
 
     it('creates a new ticket listing with correct initial state', async () => {
@@ -36,7 +36,7 @@ describe('Database Layer Unit Tests (src/lib/db.test.ts)', () => {
       expect(created.availableQuantity).toBe(150);
 
       const allTickets = await db.getTickets();
-      const found = allTickets.find(t => t.id === 'ticket-test-999');
+      const found = allTickets.find((t) => t.id === 'ticket-test-999');
       expect(found).toBeDefined();
       expect(found?.producerName).toBe('Ashanti Cinematic Arts');
     });
@@ -45,13 +45,13 @@ describe('Database Layer Unit Tests (src/lib/db.test.ts)', () => {
       await db.createTicket(mockTicket);
 
       const beforeDelete = await db.getTickets();
-      expect(beforeDelete.some(t => t.id === mockTicket.id)).toBe(true);
+      expect(beforeDelete.some((t) => t.id === mockTicket.id)).toBe(true);
 
       const deleteSuccess = await db.deleteTicket(mockTicket.id);
       expect(deleteSuccess).toBe(true);
 
       const afterDelete = await db.getTickets();
-      expect(afterDelete.some(t => t.id === mockTicket.id)).toBe(false);
+      expect(afterDelete.some((t) => t.id === mockTicket.id)).toBe(false);
     });
 
     it('allows deleting tickets silently with skipNotification flag', async () => {
@@ -60,7 +60,7 @@ describe('Database Layer Unit Tests (src/lib/db.test.ts)', () => {
       expect(deleteSuccess).toBe(true);
 
       const tickets = await db.getTickets();
-      expect(tickets.some(t => t.id === mockTicket.id)).toBe(false);
+      expect(tickets.some((t) => t.id === mockTicket.id)).toBe(false);
     });
 
     it('handles clearAllTickets cleanly', async () => {
@@ -82,7 +82,7 @@ describe('Database Layer Unit Tests (src/lib/db.test.ts)', () => {
       phoneNumber: '+233240001122',
       settlementBank: 'GCB Bank',
       accountNumber: '1029384756',
-      paystackSubaccountCode: 'ACCT_PROD_99'
+      paystackSubaccountCode: 'ACCT_PROD_99',
     };
 
     it('registers a user profile and establishes predictable zero starting balance', async () => {
@@ -107,7 +107,7 @@ describe('Database Layer Unit Tests (src/lib/db.test.ts)', () => {
         companyName: 'Ashanti Cinema Studios International',
         phoneNumber: '+233550009988',
         settlementBank: 'Fidelity Bank',
-        accountNumber: '9988776655'
+        accountNumber: '9988776655',
       });
 
       expect(updated).toBeDefined();
@@ -174,13 +174,13 @@ describe('Database Layer Unit Tests (src/lib/db.test.ts)', () => {
         totalQuantity: 50,
         availableQuantity: 50,
         createdAt: new Date().toISOString(),
-        category: 'movie'
+        category: 'movie',
       };
 
       await db.createTicket(ticket);
 
       const ticketsBefore = await db.getTickets();
-      expect(ticketsBefore.some(t => t.id === 't-cascading-1')).toBe(true);
+      expect(ticketsBefore.some((t) => t.id === 't-cascading-1')).toBe(true);
 
       // Delete the producer profile
       const deleteResult = await db.deleteProfile('producer-acc-99');
@@ -192,7 +192,7 @@ describe('Database Layer Unit Tests (src/lib/db.test.ts)', () => {
 
       // Associated tickets should be purged
       const ticketsAfter = await db.getTickets();
-      expect(ticketsAfter.some(t => t.id === 't-cascading-1')).toBe(false);
+      expect(ticketsAfter.some((t) => t.id === 't-cascading-1')).toBe(false);
     });
   });
 
@@ -213,4 +213,3 @@ describe('Database Layer Unit Tests (src/lib/db.test.ts)', () => {
     });
   });
 });
-

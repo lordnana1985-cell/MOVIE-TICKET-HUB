@@ -1,17 +1,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Space Grotesk", sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
-  
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
   /* Geometric Balance Theme-specific Colors */
   --color-gold-light: #fde047; /* amber-300 */
-  --color-gold: #fbbf24;       /* amber-400 */
-  --color-gold-dark: #f59e0b;  /* amber-500 */
-  --color-sky-light: #7dd3fc;  /* sky-300 */
-  --color-sky-deep: #0ea5e9;   /* sky-500 */
+  --color-gold: #fbbf24; /* amber-400 */
+  --color-gold-dark: #f59e0b; /* amber-500 */
+  --color-sky-light: #7dd3fc; /* sky-300 */
+  --color-sky-deep: #0ea5e9; /* sky-500 */
 }
 
 /* Custom CSS Styles */

@@ -58,7 +58,10 @@ export default function SubaccountSetup({
   onCancelEdit,
 }: SubaccountSetupProps) {
   return (
-    <div className="rounded-2xl glass-panel p-5 border border-gold/15 shadow-md space-y-4" id="producer-subaccount-setup">
+    <div
+      className="rounded-2xl glass-panel p-5 border border-gold/15 shadow-md space-y-4"
+      id="producer-subaccount-setup"
+    >
       <div className="flex items-center justify-between border-b border-white/5 pb-3">
         <h4 className="font-display text-sm font-black text-white flex items-center gap-2">
           <Percent className="h-4 w-4 text-gold" />
@@ -79,8 +82,8 @@ export default function SubaccountSetup({
         <div className="space-y-3.5 animate-fadeIn">
           <p className="text-xs text-gray-400 leading-relaxed">
             Automatic split is configured. When buyers purchase tickets,{' '}
-            <strong className="text-gold">80%</strong> will go directly to your registered bank account
-            below, and <strong className="text-sky-light">20%</strong> to the platform.
+            <strong className="text-gold">80%</strong> will go directly to your registered bank
+            account below, and <strong className="text-sky-light">20%</strong> to the platform.
           </p>
 
           <div className="rounded-xl bg-white/5 border border-white/5 p-3.5 space-y-2 text-xs">
@@ -122,8 +125,8 @@ export default function SubaccountSetup({
       ) : (
         <form onSubmit={handleCreateSubaccount} className="space-y-3 animate-fadeIn">
           <p className="text-xs text-gray-400 leading-normal">
-            Configure your business bank details below to automatically receive 80% of ticket revenues
-            directly via Paystack split-checkout.
+            Configure your business bank details below to automatically receive 80% of ticket
+            revenues directly via Paystack split-checkout.
           </p>
 
           {subaccountError && (
@@ -173,7 +176,9 @@ export default function SubaccountSetup({
 
             {/* SETTLEMENT BANK DROPDOWN */}
             <div>
-              <label className="block text-gray-400 mb-1 font-semibold">Select Settlement Bank</label>
+              <label className="block text-gray-400 mb-1 font-semibold">
+                Select Settlement Bank
+              </label>
               <select
                 required
                 value={setupBankCode}

@@ -33,7 +33,9 @@ describe('ProducerDashboard Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     global.fetch = vi.fn().mockResolvedValue({
-      json: vi.fn().mockResolvedValue({ status: true, data: [{ name: 'Access Bank', code: '044' }] }),
+      json: vi
+        .fn()
+        .mockResolvedValue({ status: true, data: [{ name: 'Access Bank', code: '044' }] }),
     }) as any;
 
     (db.getTickets as any).mockResolvedValue([
@@ -75,13 +77,7 @@ describe('ProducerDashboard Component', () => {
   });
 
   it('loads and displays producer dashboard with metrics and tickets', async () => {
-    render(
-      <ProducerDashboard
-        user={mockUser}
-        onTicketCreated={vi.fn()}
-        setActiveTab={vi.fn()}
-      />
-    );
+    render(<ProducerDashboard user={mockUser} onTicketCreated={vi.fn()} setActiveTab={vi.fn()} />);
 
     expect(screen.getByText(/Event Organiser/i)).toBeInTheDocument();
     expect(screen.getByText(/Gate Ticket Verifier/i)).toBeInTheDocument();

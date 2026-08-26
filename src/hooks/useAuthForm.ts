@@ -9,11 +9,7 @@ interface UseAuthFormOptions {
   selectedBankCode?: string;
 }
 
-export function useAuthForm({
-  initialRole,
-  onAuthSuccess,
-  selectedBankCode,
-}: UseAuthFormOptions) {
+export function useAuthForm({ initialRole, onAuthSuccess, selectedBankCode }: UseAuthFormOptions) {
   const [role, setRole] = useState<UserRole>(initialRole);
   const [isRegister, setIsRegister] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);

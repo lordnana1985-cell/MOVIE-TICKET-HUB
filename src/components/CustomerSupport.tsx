@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 
 // Custom SVG for WhatsApp Logo (crisp, brand-accurate green and white layout)
-export function WhatsAppLogoSvg({ className = "w-6 h-6" }: { className?: string }) {
+export function WhatsAppLogoSvg({ className = 'w-6 h-6' }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -17,7 +17,7 @@ export function WhatsAppLogoSvg({ className = "w-6 h-6" }: { className?: string 
 }
 
 // Custom SVG for Call Phone (glossy metallic/neon layout)
-export function PhoneLogoSvg({ className = "w-6 h-6" }: { className?: string }) {
+export function PhoneLogoSvg({ className = 'w-6 h-6' }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -45,30 +45,44 @@ export function EmbeddedSupportCard() {
   };
 
   return (
-    <div className="rounded-2xl glass-panel-gold border border-gold/20 p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden" id="embedded-support-card">
+    <div
+      className="rounded-2xl glass-panel-gold border border-gold/20 p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden"
+      id="embedded-support-card"
+    >
       <div className="absolute top-[-20%] right-[-10%] w-[40%] h-[60%] rounded-full bg-gold/5 blur-3xl pointer-events-none" />
-      
+
       <div className="space-y-3 text-center md:text-left z-10">
         <div className="flex items-center justify-center md:justify-start gap-2">
           <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-xs font-bold tracking-widest text-gold uppercase font-mono">SUPPORT ONLINE</span>
+          <span className="text-xs font-bold tracking-widest text-gold uppercase font-mono">
+            SUPPORT ONLINE
+          </span>
         </div>
-        <h3 className="text-xl md:text-2xl font-display font-bold text-white">Need Assistance or Split Payout Info?</h3>
+        <h3 className="text-xl md:text-2xl font-display font-bold text-white">
+          Need Assistance or Split Payout Info?
+        </h3>
         <p className="text-sm text-gray-300 max-w-xl leading-relaxed">
-          Our producers and ticket buyers can receive immediate assistance regarding movie setups, tickets, and split disbursements via WhatsApp or direct voice call.
+          Our producers and ticket buyers can receive immediate assistance regarding movie setups,
+          tickets, and split disbursements via WhatsApp or direct voice call.
         </p>
       </div>
 
       <div className="flex flex-col items-center sm:items-stretch gap-4 shrink-0 z-10 w-full sm:w-auto">
         <div className="flex items-center justify-between gap-3 bg-black/40 border border-white/10 rounded-xl px-4 py-3 font-mono text-white text-base font-bold">
-          <span className="text-gray-400 text-xs uppercase tracking-wider font-sans">Support line:</span>
+          <span className="text-gray-400 text-xs uppercase tracking-wider font-sans">
+            Support line:
+          </span>
           <span>0543198585</span>
-          <button 
+          <button
             onClick={handleCopy}
             className="text-gold hover:text-white transition-colors p-1"
             title="Copy Number"
           >
-            {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <span className="text-xs font-sans text-gold hover:underline">Copy</span>}
+            {copied ? (
+              <Check className="w-4 h-4 text-emerald-400" />
+            ) : (
+              <span className="text-xs font-sans text-gold hover:underline">Copy</span>
+            )}
           </button>
         </div>
 
@@ -103,19 +117,22 @@ export default function CustomerSupport() {
   const [hovered, setHovered] = useState(false);
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3 pointer-events-none" id="customer-support-floating-wrapper">
+    <div
+      className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3 pointer-events-none"
+      id="customer-support-floating-wrapper"
+    >
       <AnimatePresence>
         {isOpen && (
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 15 }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
             className="pointer-events-auto w-80 rounded-2xl glass-panel p-5 shadow-2xl border border-gold/20 relative overflow-hidden bg-slate-950/95 backdrop-blur-lg"
           >
             {/* Ambient gold background glow */}
             <div className="absolute -top-12 -right-12 w-28 h-28 bg-gold/10 rounded-full blur-2xl pointer-events-none" />
-            
+
             {/* HEADER */}
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/5">
               <div className="flex items-center gap-2">
@@ -124,11 +141,13 @@ export default function CustomerSupport() {
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                 </div>
                 <div>
-                  <h4 className="text-xs font-mono font-bold tracking-widest text-gold uppercase">CUSTOMER SUPPORT</h4>
+                  <h4 className="text-xs font-mono font-bold tracking-widest text-gold uppercase">
+                    CUSTOMER SUPPORT
+                  </h4>
                   <p className="text-[10px] text-gray-400">Available via Chat or Call</p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => setIsOpen(false)}
                 className="p-1 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
                 id="close-support-popover-btn"
@@ -140,10 +159,13 @@ export default function CustomerSupport() {
             {/* BODY */}
             <div className="space-y-4">
               <div className="bg-white/5 rounded-xl p-3 border border-white/5">
-                <span className="text-[9px] text-gray-400 font-mono tracking-wider uppercase block mb-1">Customer Service Number</span>
+                <span className="text-[9px] text-gray-400 font-mono tracking-wider uppercase block mb-1">
+                  Customer Service Number
+                </span>
                 <span className="text-lg font-mono font-black text-white block">0543198585</span>
                 <p className="text-[11px] text-gray-300 mt-1">
-                  Connect instantly for rapid queries, split calculations, gate operations, or platform support.
+                  Connect instantly for rapid queries, split calculations, gate operations, or
+                  platform support.
                 </p>
               </div>
 
@@ -163,7 +185,9 @@ export default function CustomerSupport() {
                   </div>
                   <div className="text-left">
                     <span className="block font-bold">WhatsApp Chat</span>
-                    <span className="block text-[10px] font-normal text-white/80 font-mono">Chat instantly with support</span>
+                    <span className="block text-[10px] font-normal text-white/80 font-mono">
+                      Chat instantly with support
+                    </span>
                   </div>
                 </a>
 
@@ -179,7 +203,9 @@ export default function CustomerSupport() {
                   </div>
                   <div className="text-left">
                     <span className="block font-bold">Direct Phone Call</span>
-                    <span className="block text-[10px] font-normal text-white/80 font-mono">Dial support directly</span>
+                    <span className="block text-[10px] font-normal text-white/80 font-mono">
+                      Dial support directly
+                    </span>
                   </div>
                 </a>
               </div>
@@ -210,8 +236,8 @@ export default function CustomerSupport() {
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.95 }}
           className={`h-14 w-14 rounded-full flex items-center justify-center cursor-pointer shadow-2xl relative transition-all duration-300 border ${
-            isOpen 
-              ? 'bg-slate-800 border-white/20 text-white shadow-black/50' 
+            isOpen
+              ? 'bg-slate-800 border-white/20 text-white shadow-black/50'
               : 'bg-gradient-to-tr from-gold via-gold-dark to-amber-600 border-gold-light text-slate-950 shadow-gold/25'
           }`}
           style={{ boxShadow: isOpen ? undefined : '0 0 25px rgba(251, 191, 36, 0.45)' }}
@@ -221,7 +247,7 @@ export default function CustomerSupport() {
           {!isOpen && (
             <span className="absolute inset-0 rounded-full bg-gold/30 animate-ping -z-10" />
           )}
-          
+
           {isOpen ? (
             <X className="w-6 h-6 stroke-[2.5]" />
           ) : (

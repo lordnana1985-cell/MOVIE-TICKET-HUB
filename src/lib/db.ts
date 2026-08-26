@@ -1,45 +1,40 @@
-import { 
-  supabase, 
+import {
+  supabase,
   SUPABASE_URL,
   SUPABASE_ANON_KEY,
-  isSupabaseConfigured, 
-  getSupabaseLastError, 
-  setSupabaseLastError, 
-  clearSupabaseLastError, 
-  getSupabaseStatus, 
-  uploadFile, 
-  clearAllSimulations, 
-  notifyTicketsChanged 
+  isSupabaseConfigured,
+  getSupabaseLastError,
+  setSupabaseLastError,
+  clearSupabaseLastError,
+  getSupabaseStatus,
+  uploadFile,
+  clearAllSimulations,
+  notifyTicketsChanged,
 } from './db/client';
 
-import { 
-  getTickets, 
-  createTicket, 
-  deleteTicket, 
-  clearAllTickets 
-} from './db/tickets';
+import { getTickets, createTicket, deleteTicket, clearAllTickets } from './db/tickets';
 
-import { 
-  purchaseTicket, 
-  getPurchasesForBuyer, 
-  getPurchasesForProducer, 
-  authenticateTicket, 
-  saveGateLog, 
-  getGateLogs 
+import {
+  purchaseTicket,
+  getPurchasesForBuyer,
+  getPurchasesForProducer,
+  authenticateTicket,
+  saveGateLog,
+  getGateLogs,
 } from './db/purchases';
 
-import { 
-  checkEmailExists, 
-  checkEmailOppositeRole, 
-  registerUser, 
-  loginUser, 
-  getUserProfile, 
-  updateUserProfile, 
-  generatePaystackSubaccount, 
-  checkUserEmailConfirmed, 
-  resendVerificationEmail, 
-  getAllProfiles, 
-  deleteProfile 
+import {
+  checkEmailExists,
+  checkEmailOppositeRole,
+  registerUser,
+  loginUser,
+  getUserProfile,
+  updateUserProfile,
+  generatePaystackSubaccount,
+  checkUserEmailConfirmed,
+  resendVerificationEmail,
+  getAllProfiles,
+  deleteProfile,
 } from './db/profiles';
 
 export {
@@ -51,7 +46,7 @@ export {
   setSupabaseLastError,
   clearSupabaseLastError,
   getSupabaseStatus,
-  notifyTicketsChanged
+  notifyTicketsChanged,
 };
 
 export const db = {
@@ -77,7 +72,7 @@ export const db = {
   getPurchasesForProducer,
   authenticateTicket,
   saveGateLog,
-  getGateLogs
+  getGateLogs,
 };
 
 export default db;

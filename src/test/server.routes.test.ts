@@ -142,7 +142,10 @@ describe('Server API Routes & Integration Tests', () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      text: () => Promise.resolve(JSON.stringify({ status: true, data: [{ name: 'Test Bank', code: 'TB' }] })),
+      text: () =>
+        Promise.resolve(
+          JSON.stringify({ status: true, data: [{ name: 'Test Bank', code: 'TB' }] })
+        ),
     } as any);
 
     const res = await request(app).get('/api/paystack/banks');

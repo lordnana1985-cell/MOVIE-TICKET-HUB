@@ -45,8 +45,8 @@ export default function GateLogList({ logs }: GateLogListProps) {
                 log.status === 'success'
                   ? 'border-emerald-500/10'
                   : log.status === 'already_used'
-                  ? 'border-amber-500/10'
-                  : 'border-red-500/10'
+                    ? 'border-amber-500/10'
+                    : 'border-red-500/10'
               }`}
             >
               <div className="flex justify-between items-start">
@@ -64,11 +64,15 @@ export default function GateLogList({ logs }: GateLogListProps) {
                     log.status === 'success'
                       ? 'bg-emerald-500/10 text-emerald-400'
                       : log.status === 'already_used'
-                      ? 'bg-amber-500/10 text-amber-400'
-                      : 'bg-red-500/10 text-red-400'
+                        ? 'bg-amber-500/10 text-amber-400'
+                        : 'bg-red-500/10 text-red-400'
                   }`}
                 >
-                  {log.status === 'success' ? 'GRANTED' : log.status === 'already_used' ? 'USED' : 'INVALID'}
+                  {log.status === 'success'
+                    ? 'GRANTED'
+                    : log.status === 'already_used'
+                      ? 'USED'
+                      : 'INVALID'}
                 </span>
               </div>
 

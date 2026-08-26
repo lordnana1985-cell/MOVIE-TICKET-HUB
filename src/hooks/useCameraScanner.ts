@@ -82,7 +82,9 @@ export function useCameraScanner(options: UseCameraScannerOptions = {}): UseCame
 
         const targetDevice = deviceId || selectedDeviceId;
         const constraints: MediaStreamConstraints = {
-          video: targetDevice ? { deviceId: { exact: targetDevice } } : { facingMode: 'environment' },
+          video: targetDevice
+            ? { deviceId: { exact: targetDevice } }
+            : { facingMode: 'environment' },
         };
 
         if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {

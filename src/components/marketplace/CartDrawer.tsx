@@ -104,9 +104,7 @@ export default function CartDrawer({
                     <h4 className="font-bold text-white text-sm truncate pr-6">
                       {item.ticket.title}
                     </h4>
-                    <p className="text-[10px] text-gray-400 truncate mt-0.5">
-                      {item.ticket.venue}
-                    </p>
+                    <p className="text-[10px] text-gray-400 truncate mt-0.5">{item.ticket.venue}</p>
                   </div>
 
                   <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
@@ -167,7 +165,9 @@ export default function CartDrawer({
               </div>
               <div className="flex justify-between items-center text-sm font-bold">
                 <span className="text-white">Total Amount</span>
-                <span className="text-gold font-mono text-base">GH₵{cartTotal.toLocaleString()}</span>
+                <span className="text-gold font-mono text-base">
+                  GH₵{cartTotal.toLocaleString()}
+                </span>
               </div>
             </div>
 

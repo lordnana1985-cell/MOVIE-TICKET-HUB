@@ -1,10 +1,10 @@
 import { TicketPurchase, GateLog, MovieTicket, UserProfile } from '../../types';
-import { 
-  supabase, 
-  isSupabaseConfigured, 
-  getLocalData, 
-  setLocalData, 
-  notifyTicketsChanged 
+import {
+  supabase,
+  isSupabaseConfigured,
+  getLocalData,
+  setLocalData,
+  notifyTicketsChanged,
 } from './client';
 import { getTickets } from './tickets';
 import { logger } from '../logger';
@@ -31,8 +31,8 @@ export async function purchaseTicket(purchase: TicketPurchase): Promise<TicketPu
           hub_earning: purchase.hubEarning,
           paystack_ref: purchase.paystackRef,
           purchased_at: purchase.purchasedAt,
-          status: purchase.status
-        }
+          status: purchase.status,
+        },
       ]);
       if (purchaseErr) throw purchaseErr;
 
@@ -53,19 +53,29 @@ export async function purchaseTicket(purchase: TicketPurchase): Promise<TicketPu
       const { data: producer } = await supabase
         .from('profiles')
         .select('balance, id')
-        .eq('id', (await supabase.from('movie_tickets').select('producer_id').eq('id', purchase.ticketId).single()).data?.producer_id)
+        .eq(
+          'id',
+          (
+            await supabase
+              .from('movie_tickets')
+              .select('producer_id')
+              .eq('id', purchase.ticketId)
+              .single()
+          ).data?.producer_id
+        )
         .single();
 
       if (producer) {
         const newBal = Number(producer.balance || 0) + purchase.producerEarning;
-        await supabase
-          .from('profiles')
-          .update({ balance: newBal })
-          .eq('id', producer.id);
+        await supabase.from('profiles').update({ balance: newBal }).eq('id', producer.id);
       }
     } catch (e: unknown) {
       const dbErr = DbError.fromError('purchaseTicket', e, true);
-      logger.debug('Supabase purchase transaction failed, falling back to LocalStorage', 'purchases', { error: dbErr.message });
+      logger.debug(
+        'Supabase purchase transaction failed, falling back to LocalStorage',
+        'purchases',
+        { error: dbErr.message }
+      );
     }
   }
 
@@ -74,7 +84,7 @@ export async function purchaseTicket(purchase: TicketPurchase): Promise<TicketPu
   setLocalData('purchases', purchases);
 
   const tickets = getLocalData<MovieTicket[]>('tickets', []);
-  const updatedTickets = tickets.map(t => {
+  const updatedTickets = tickets.map((t) => {
     if (t.id === purchase.ticketId) {
       return { ...t, availableQuantity: Math.max(0, t.availableQuantity - 1) };
     }
@@ -82,10 +92,10 @@ export async function purchaseTicket(purchase: TicketPurchase): Promise<TicketPu
   });
   setLocalData('tickets', updatedTickets);
 
-  const foundTicket = tickets.find(t => t.id === purchase.ticketId);
+  const foundTicket = tickets.find((t) => t.id === purchase.ticketId);
   if (foundTicket) {
     const users = getLocalData<UserProfile[]>('users', []);
-    const updatedUsers = users.map(u => {
+    const updatedUsers = users.map((u) => {
       if (u.id === foundTicket.producerId) {
         return { ...u, balance: (u.balance || 0) + purchase.producerEarning };
       }
@@ -111,7 +121,7 @@ export async function getPurchasesForBuyer(buyerId: string): Promise<TicketPurch
         .order('purchased_at', { ascending: false });
       if (error) throw error;
       if (data) {
-        supabasePurchases = data.map(p => ({
+        supabasePurchases = data.map((p) => ({
           id: p.id,
           ticketId: p.ticket_id,
           movieTitle: p.movie_title,
@@ -125,13 +135,17 @@ export async function getPurchasesForBuyer(buyerId: string): Promise<TicketPurch
           paystackRef: p.paystack_ref,
           purchasedAt: p.purchased_at,
           status: p.status as 'unused' | 'used',
-          scannedAt: p.scanned_at
+          scannedAt: p.scanned_at,
         }));
         fetchSucceeded = true;
       }
     } catch (e: unknown) {
       const dbErr = DbError.fromError('getPurchasesForBuyer', e, true);
-      logger.debug('Supabase getPurchasesForBuyer failed, falling back to LocalStorage', 'purchases', { error: dbErr.message });
+      logger.debug(
+        'Supabase getPurchasesForBuyer failed, falling back to LocalStorage',
+        'purchases',
+        { error: dbErr.message }
+      );
     }
   }
 
@@ -148,16 +162,18 @@ export async function getPurchasesForBuyer(buyerId: string): Promise<TicketPurch
     setLocalData('purchases', uniqueLocalPurchases);
   }
 
-  const localPurchases = uniqueLocalPurchases.filter(p => p.buyerId === buyerId);
+  const localPurchases = uniqueLocalPurchases.filter((p) => p.buyerId === buyerId);
 
   if (fetchSucceeded) {
     const merged = [...supabasePurchases];
     for (const lp of localPurchases) {
-      if (!merged.some(p => p.id === lp.id)) {
+      if (!merged.some((p) => p.id === lp.id)) {
         merged.push(lp);
       }
     }
-    return merged.sort((a, b) => new Date(b.purchasedAt).getTime() - new Date(a.purchasedAt).getTime());
+    return merged.sort(
+      (a, b) => new Date(b.purchasedAt).getTime() - new Date(a.purchasedAt).getTime()
+    );
   }
 
   return localPurchases;
@@ -165,7 +181,7 @@ export async function getPurchasesForBuyer(buyerId: string): Promise<TicketPurch
 
 export async function getPurchasesForProducer(producerId: string): Promise<TicketPurchase[]> {
   const tickets = await getTickets();
-  const producerTicketIds = tickets.filter(t => t.producerId === producerId).map(t => t.id);
+  const producerTicketIds = tickets.filter((t) => t.producerId === producerId).map((t) => t.id);
 
   let supabasePurchases: TicketPurchase[] = [];
   let fetchSucceeded = false;
@@ -179,7 +195,7 @@ export async function getPurchasesForProducer(producerId: string): Promise<Ticke
         .order('purchased_at', { ascending: false });
       if (error) throw error;
       if (data) {
-        supabasePurchases = data.map(p => ({
+        supabasePurchases = data.map((p) => ({
           id: p.id,
           ticketId: p.ticket_id,
           movieTitle: p.movie_title,
@@ -193,13 +209,17 @@ export async function getPurchasesForProducer(producerId: string): Promise<Ticke
           paystackRef: p.paystack_ref,
           purchasedAt: p.purchased_at,
           status: p.status as 'unused' | 'used',
-          scannedAt: p.scanned_at
+          scannedAt: p.scanned_at,
         }));
         fetchSucceeded = true;
       }
     } catch (e: unknown) {
       const dbErr = DbError.fromError('getPurchasesForProducer', e, true);
-      logger.debug('Supabase getPurchasesForProducer failed, falling back to LocalStorage', 'purchases', { error: dbErr.message });
+      logger.debug(
+        'Supabase getPurchasesForProducer failed, falling back to LocalStorage',
+        'purchases',
+        { error: dbErr.message }
+      );
     }
   }
 
@@ -216,16 +236,18 @@ export async function getPurchasesForProducer(producerId: string): Promise<Ticke
     setLocalData('purchases', uniqueLocalPurchases);
   }
 
-  const localPurchases = uniqueLocalPurchases.filter(p => producerTicketIds.includes(p.ticketId));
+  const localPurchases = uniqueLocalPurchases.filter((p) => producerTicketIds.includes(p.ticketId));
 
   if (fetchSucceeded) {
     const merged = [...supabasePurchases];
     for (const lp of localPurchases) {
-      if (!merged.some(p => p.id === lp.id)) {
+      if (!merged.some((p) => p.id === lp.id)) {
         merged.push(lp);
       }
     }
-    return merged.sort((a, b) => new Date(b.purchasedAt).getTime() - new Date(a.purchasedAt).getTime());
+    return merged.sort(
+      (a, b) => new Date(b.purchasedAt).getTime() - new Date(a.purchasedAt).getTime()
+    );
   }
 
   return localPurchases;
@@ -242,8 +264,8 @@ export async function saveGateLog(log: GateLog): Promise<void> {
           movie_title: log.movieTitle,
           buyer_name: log.buyerName,
           scanned_at: log.scannedAt,
-          status: log.status
-        }
+          status: log.status,
+        },
       ]);
     } catch (e: unknown) {
       const dbErr = DbError.fromError('saveGateLog', e, true);
@@ -256,9 +278,11 @@ export async function saveGateLog(log: GateLog): Promise<void> {
   setLocalData('gate_logs', logs);
 }
 
-export async function authenticateTicket(purchaseId: string): Promise<{ success: boolean; message: string; purchase?: TicketPurchase }> {
+export async function authenticateTicket(
+  purchaseId: string
+): Promise<{ success: boolean; message: string; purchase?: TicketPurchase }> {
   const timestamp = new Date().toISOString();
-  
+
   let purchase: TicketPurchase | undefined;
   let localPurchases = getLocalData<TicketPurchase[]>('purchases', []);
 
@@ -270,7 +294,9 @@ export async function authenticateTicket(purchaseId: string): Promise<{ success:
         .eq('id', purchaseId)
         .single();
       if (error) {
-        logger.debug('Ticket not found in Supabase during auth scan', 'purchases', { error: error.message });
+        logger.debug('Ticket not found in Supabase during auth scan', 'purchases', {
+          error: error.message,
+        });
       } else if (data) {
         purchase = {
           id: data.id,
@@ -286,17 +312,19 @@ export async function authenticateTicket(purchaseId: string): Promise<{ success:
           paystackRef: p_ref_map(data.paystack_ref),
           purchasedAt: data.purchased_at,
           status: data.status as 'unused' | 'used',
-          scannedAt: data.scanned_at
+          scannedAt: data.scanned_at,
         };
       }
     } catch (e: unknown) {
       const dbErr = DbError.fromError('authenticateTicket', e, true);
-      logger.debug('Supabase check before auth failed, falling back to LocalStorage', 'purchases', { error: dbErr.message });
+      logger.debug('Supabase check before auth failed, falling back to LocalStorage', 'purchases', {
+        error: dbErr.message,
+      });
     }
   }
 
   if (!purchase) {
-    purchase = localPurchases.find(p => p.id === purchaseId);
+    purchase = localPurchases.find((p) => p.id === purchaseId);
   }
 
   if (!purchase) {
@@ -307,10 +335,13 @@ export async function authenticateTicket(purchaseId: string): Promise<{ success:
       movieTitle: 'Unknown Movie',
       buyerName: 'Unknown Ticket Holder',
       scannedAt: timestamp,
-      status: 'invalid'
+      status: 'invalid',
     };
     await saveGateLog(gateLog);
-    return { success: false, message: 'Invalid ticket reference! This ticket does not exist in our system.' };
+    return {
+      success: false,
+      message: 'Invalid ticket reference! This ticket does not exist in our system.',
+    };
   }
 
   if (purchase.status === 'used') {
@@ -321,10 +352,14 @@ export async function authenticateTicket(purchaseId: string): Promise<{ success:
       movieTitle: purchase.movieTitle,
       buyerName: purchase.buyerName,
       scannedAt: timestamp,
-      status: 'already_used'
+      status: 'already_used',
     };
     await saveGateLog(gateLog);
-    return { success: false, message: `Ticket already USED! It was authenticated on ${new Date(purchase.scannedAt || '').toLocaleString()}`, purchase };
+    return {
+      success: false,
+      message: `Ticket already USED! It was authenticated on ${new Date(purchase.scannedAt || '').toLocaleString()}`,
+      purchase,
+    };
   }
 
   purchase.status = 'used';
@@ -342,7 +377,7 @@ export async function authenticateTicket(purchaseId: string): Promise<{ success:
     }
   }
 
-  localPurchases = localPurchases.map(p => {
+  localPurchases = localPurchases.map((p) => {
     if (p.id === purchaseId) {
       return { ...p, status: 'used', scannedAt: timestamp };
     }
@@ -357,16 +392,22 @@ export async function authenticateTicket(purchaseId: string): Promise<{ success:
     movieTitle: purchase.movieTitle,
     buyerName: purchase.buyerName,
     scannedAt: timestamp,
-    status: 'success'
+    status: 'success',
   };
   await saveGateLog(gateLog);
 
-  return { success: true, message: `Ticket Authenticated successfully! Welcome to the show, ${purchase.buyerName}.`, purchase };
+  return {
+    success: true,
+    message: `Ticket Authenticated successfully! Welcome to the show, ${purchase.buyerName}.`,
+    purchase,
+  };
 }
 
 export async function getGateLogs(producerId?: string): Promise<GateLog[]> {
   const tickets = await getTickets();
-  const producerTicketIds = producerId ? tickets.filter(t => t.producerId === producerId).map(t => t.id) : null;
+  const producerTicketIds = producerId
+    ? tickets.filter((t) => t.producerId === producerId).map((t) => t.id)
+    : null;
 
   let supabaseLogs: GateLog[] = [];
   let fetchSucceeded = false;
@@ -380,32 +421,34 @@ export async function getGateLogs(producerId?: string): Promise<GateLog[]> {
       const { data, error } = await query.order('scanned_at', { ascending: false });
       if (error) throw error;
       if (data) {
-        supabaseLogs = data.map(l => ({
+        supabaseLogs = data.map((l) => ({
           id: l.id,
           purchaseId: l.purchase_id,
           ticketId: l.ticket_id,
           movieTitle: l.movie_title,
           buyerName: l.buyer_name,
           scannedAt: l.scanned_at,
-          status: l.status as 'success' | 'already_used' | 'invalid'
+          status: l.status as 'success' | 'already_used' | 'invalid',
         }));
         fetchSucceeded = true;
       }
     } catch (e: unknown) {
       const dbErr = DbError.fromError('getGateLogs', e, true);
-      logger.debug('Supabase getGateLogs failed, falling back to LocalStorage', 'purchases', { error: dbErr.message });
+      logger.debug('Supabase getGateLogs failed, falling back to LocalStorage', 'purchases', {
+        error: dbErr.message,
+      });
     }
   }
 
   const rawLocalLogs = getLocalData<GateLog[]>('gate_logs', []);
-  const localLogs = producerTicketIds 
-    ? rawLocalLogs.filter(l => producerTicketIds.includes(l.ticketId) || l.ticketId === 'unknown')
+  const localLogs = producerTicketIds
+    ? rawLocalLogs.filter((l) => producerTicketIds.includes(l.ticketId) || l.ticketId === 'unknown')
     : rawLocalLogs;
 
   if (fetchSucceeded) {
     const merged = [...supabaseLogs];
     for (const ll of localLogs) {
-      if (!merged.some(l => l.id === ll.id)) {
+      if (!merged.some((l) => l.id === ll.id)) {
         merged.push(ll);
       }
     }

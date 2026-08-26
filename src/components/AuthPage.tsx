@@ -15,11 +15,7 @@ interface AuthPageProps {
   onCancel?: () => void;
 }
 
-export default function AuthPage({
-  initialRole,
-  onAuthSuccess,
-  onCancel,
-}: AuthPageProps) {
+export default function AuthPage({ initialRole, onAuthSuccess, onCancel }: AuthPageProps) {
   const [showAdminTab, setShowAdminTab] = useState(() => {
     try {
       const urlParams = new URLSearchParams(window.location.search);
@@ -183,8 +179,8 @@ export default function AuthPage({
                         role === 'admin'
                           ? 'text-rose-500'
                           : role === 'producer'
-                          ? 'text-gold'
-                          : 'text-sky-light'
+                            ? 'text-gold'
+                            : 'text-sky-light'
                       }`}
                     />
                   </div>
@@ -192,17 +188,17 @@ export default function AuthPage({
                     {role === 'admin'
                       ? 'Admin Control Portal'
                       : role === 'producer'
-                      ? 'Organiser Portal'
-                      : 'Buyer Portal'}
+                        ? 'Organiser Portal'
+                        : 'Buyer Portal'}
                   </h2>
                   <p className="text-xs text-gray-400 mt-1">
                     {isRegister
                       ? 'Register your event organiser or buyer profile'
                       : role === 'admin'
-                      ? 'SIGN IN TO DEPLOY AND REGULATE CINEMAS'
-                      : role === 'producer'
-                      ? 'SIGN IN TO PUBLISH LIVE EVENT TICKETS'
-                      : 'Sign in to access tickets, trailers and events'}
+                        ? 'SIGN IN TO DEPLOY AND REGULATE CINEMAS'
+                        : role === 'producer'
+                          ? 'SIGN IN TO PUBLISH LIVE EVENT TICKETS'
+                          : 'Sign in to access tickets, trailers and events'}
                   </p>
                 </div>
 
@@ -281,7 +277,8 @@ export default function AuthPage({
                   <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-300 space-y-2">
                     <p>
                       A verification email was dispatched to{' '}
-                      <strong>{pendingVerificationEmail}</strong>. Please confirm your email address.
+                      <strong>{pendingVerificationEmail}</strong>. Please confirm your email
+                      address.
                     </p>
                     <button
                       type="button"
@@ -292,8 +289,8 @@ export default function AuthPage({
                       {resending
                         ? 'Sending verification link...'
                         : resendCooldown > 0
-                        ? `Resend available in ${resendCooldown}s`
-                        : 'Resend Verification Link'}
+                          ? `Resend available in ${resendCooldown}s`
+                          : 'Resend Verification Link'}
                     </button>
                   </div>
                 )}
@@ -347,8 +344,8 @@ export default function AuthPage({
                       role === 'admin'
                         ? 'text-rose-500'
                         : role === 'producer'
-                        ? 'text-gold'
-                        : 'text-sky-light'
+                          ? 'text-gold'
+                          : 'text-sky-light'
                     }`}
                     id="page-auth-switch-mode-btn"
                   >

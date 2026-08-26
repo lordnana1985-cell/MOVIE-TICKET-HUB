@@ -51,7 +51,9 @@ describe('SubaccountSetup Component', () => {
     expect(screen.getByText(/80\/20 Payout Subaccount/i)).toBeInTheDocument();
     expect(screen.getByText('ACTIVE')).toBeInTheDocument();
     expect(screen.getByText('ACCT_test123')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Edit Payout Settlement Bank/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Edit Payout Settlement Bank/i })
+    ).toBeInTheDocument();
   });
 
   it('renders form inputs when in editing mode', () => {

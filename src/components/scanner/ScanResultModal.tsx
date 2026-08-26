@@ -18,8 +18,8 @@ export default function ScanResultModal({ scanResult, onClose }: ScanResultModal
         scanResult.success
           ? 'bg-emerald-500/10 border-emerald-500/20 text-white'
           : scanResult.purchase?.status === 'used'
-          ? 'bg-amber-500/10 border-amber-500/20 text-white'
-          : 'bg-red-500/10 border-red-500/20 text-white'
+            ? 'bg-amber-500/10 border-amber-500/20 text-white'
+            : 'bg-red-500/10 border-red-500/20 text-white'
       }`}
     >
       <div className="shrink-0">
@@ -50,9 +50,7 @@ export default function ScanResultModal({ scanResult, onClose }: ScanResultModal
             {scanResult.success ? 'ACCESS GRANTED' : 'ACCESS DENIED'}
           </span>
           {scanResult.purchase && (
-            <span className="text-xs text-gray-400 font-mono">
-              Ref: {scanResult.purchase.id}
-            </span>
+            <span className="text-xs text-gray-400 font-mono">Ref: {scanResult.purchase.id}</span>
           )}
         </div>
 
@@ -81,11 +79,10 @@ export default function ScanResultModal({ scanResult, onClose }: ScanResultModal
             <div>
               <span className="text-gray-500 text-[10px] block">PAYMENT REF</span>
               <span className="font-bold text-sky-light truncate block">
-                {(
-                  scanResult.purchase.paystackRef ||
-                  scanResult.purchase.id ||
-                  'N/A'
-                ).substring(0, 10)}
+                {(scanResult.purchase.paystackRef || scanResult.purchase.id || 'N/A').substring(
+                  0,
+                  10
+                )}
                 ...
               </span>
             </div>

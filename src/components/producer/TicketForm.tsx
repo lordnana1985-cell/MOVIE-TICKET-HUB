@@ -1,14 +1,5 @@
 import React, { useState, FormEvent } from 'react';
-import { 
-  Film, 
-  MapPin, 
-  Calendar, 
-  Clock, 
-  ExternalLink, 
-  Plus, 
-  Eye, 
-  X 
-} from 'lucide-react';
+import { Film, MapPin, Calendar, Clock, ExternalLink, Plus, Eye, X } from 'lucide-react';
 import { UserProfile, MovieTicket } from '../../types';
 import { db, getSupabaseLastError, clearSupabaseLastError } from '../../lib/db';
 import { useAssetUpload } from '../../hooks/useAssetUpload';
@@ -29,7 +20,7 @@ export const TEMPLATE_COVERS = [
   'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&q=80&w=600',
   'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=600',
   // Others
-  'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&q=80&w=600'
+  'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&q=80&w=600',
 ];
 
 interface TicketFormProps {
@@ -39,7 +30,9 @@ interface TicketFormProps {
 }
 
 export default function TicketForm({ user, onClose, onSuccess }: TicketFormProps) {
-  const [category, setCategory] = useState<'movie' | 'music' | 'beauty' | 'campus' | 'other'>('movie');
+  const [category, setCategory] = useState<'movie' | 'music' | 'beauty' | 'campus' | 'other'>(
+    'movie'
+  );
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState(150);
@@ -117,11 +110,11 @@ export default function TicketForm({ user, onClose, onSuccess }: TicketFormProps
         availableQuantity: totalQuantity,
         coverUrl: finalCoverUrl,
         createdAt: new Date().toISOString(),
-        category
+        category,
       };
 
       await db.createTicket(newTicket);
-      
+
       const dbErr = getSupabaseLastError();
       const isFileCover = coverSource === 'file';
       const isFileVideo = videoSource === 'file';
@@ -139,9 +132,11 @@ export default function TicketForm({ user, onClose, onSuccess }: TicketFormProps
       setVideoFile(null);
       setVideoSource('url');
       setCoverSource('template');
-      
+
       if (dbErr) {
-        setError(`Notice: Ticket created in Local Browser Storage, but failed to sync to Supabase Database (Error: "${dbErr}").`);
+        setError(
+          `Notice: Ticket created in Local Browser Storage, but failed to sync to Supabase Database (Error: "${dbErr}").`
+        );
         setTimeout(() => {
           setError('');
           onSuccess();
@@ -161,7 +156,6 @@ export default function TicketForm({ user, onClose, onSuccess }: TicketFormProps
           onClose();
         }, 2000);
       }
-
     } catch (err: any) {
       setError(`Failed to generate ticket: ${err.message || String(err)}`);
     }
@@ -176,10 +170,12 @@ export default function TicketForm({ user, onClose, onSuccess }: TicketFormProps
           </div>
           <div>
             <h3 className="text-lg font-bold text-white font-display">Generate Event Ticket</h3>
-            <p className="text-xs text-gray-400">Launch a new event premiere, set ticket quantities, and embed media.</p>
+            <p className="text-xs text-gray-400">
+              Launch a new event premiere, set ticket quantities, and embed media.
+            </p>
           </div>
         </div>
-        <button 
+        <button
           onClick={onClose}
           className="text-gray-400 hover:text-white text-xs font-semibold px-2 py-1 rounded hover:bg-white/5"
         >
@@ -187,13 +183,32 @@ export default function TicketForm({ user, onClose, onSuccess }: TicketFormProps
         </button>
       </div>
 
-      {error && <div className="mb-4 rounded-xl bg-red-500/10 border border-red-500/20 p-3.5 text-xs text-red-400 font-medium">{error}</div>}
-      {success && <div className="mb-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3.5 text-xs text-emerald-400 font-medium">{success}</div>}
+      {error && (
+        <div className="mb-4 rounded-xl bg-red-500/10 border border-red-500/20 p-3.5 text-xs text-red-400 font-medium">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="mb-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3.5 text-xs text-emerald-400 font-medium">
+          {success}
+        </div>
+      )}
       {isUploading && (
         <div className="mb-4 rounded-xl bg-gold/10 border border-gold/20 p-3.5 text-xs text-gold font-medium flex items-center gap-3 animate-pulse">
           <svg className="animate-spin h-4 w-4 text-gold" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            />
           </svg>
           <span>{uploadStatus}</span>
         </div>
@@ -203,26 +218,43 @@ export default function TicketForm({ user, onClose, onSuccess }: TicketFormProps
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1.5 font-mono">EVENT CATEGORY *</label>
+              <label className="block text-xs font-medium text-gray-300 mb-1.5 font-mono">
+                EVENT CATEGORY *
+              </label>
               <select
                 value={category}
                 onChange={(e) => handleCategoryChange(e.target.value as any)}
                 className="w-full rounded-xl bg-black/30 border border-white/10 px-4 py-2.5 text-sm text-white focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold font-medium"
               >
-                <option value="movie" className="bg-slate-950">Movie Premier / Cinema</option>
-                <option value="music" className="bg-slate-950">Music Show / Live Concert</option>
-                <option value="beauty" className="bg-slate-950">Beauty Pageant Show</option>
-                <option value="campus" className="bg-slate-950">Campus Event / Student Show</option>
-                <option value="other" className="bg-slate-950">Other Shows / Live Events</option>
+                <option value="movie" className="bg-slate-950">
+                  Movie Premier / Cinema
+                </option>
+                <option value="music" className="bg-slate-950">
+                  Music Show / Live Concert
+                </option>
+                <option value="beauty" className="bg-slate-950">
+                  Beauty Pageant Show
+                </option>
+                <option value="campus" className="bg-slate-950">
+                  Campus Event / Student Show
+                </option>
+                <option value="other" className="bg-slate-950">
+                  Other Shows / Live Events
+                </option>
               </select>
             </div>
 
             <div>
               <label className="block text-xs font-medium text-gray-300 mb-1.5 font-mono">
-                {category === 'movie' ? 'MOVIE TITLE *' : 
-                 category === 'music' ? 'MUSIC SHOW TITLE *' : 
-                 category === 'beauty' ? 'BEAUTY PAGEANT TITLE *' : 
-                 category === 'campus' ? 'CAMPUS EVENT TITLE *' : 'EVENT TITLE *'}
+                {category === 'movie'
+                  ? 'MOVIE TITLE *'
+                  : category === 'music'
+                    ? 'MUSIC SHOW TITLE *'
+                    : category === 'beauty'
+                      ? 'BEAUTY PAGEANT TITLE *'
+                      : category === 'campus'
+                        ? 'CAMPUS EVENT TITLE *'
+                        : 'EVENT TITLE *'}
               </label>
               <input
                 type="text"
@@ -250,7 +282,9 @@ export default function TicketForm({ user, onClose, onSuccess }: TicketFormProps
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-gray-300 mb-1.5 font-mono">TICKET PRICE (GH₵ GHS) *</label>
+                <label className="block text-xs font-medium text-gray-300 mb-1.5 font-mono">
+                  TICKET PRICE (GH₵ GHS) *
+                </label>
                 <input
                   type="number"
                   required
@@ -261,7 +295,9 @@ export default function TicketForm({ user, onClose, onSuccess }: TicketFormProps
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-300 mb-1.5 font-mono">TOTAL TICKET COUNT *</label>
+                <label className="block text-xs font-medium text-gray-300 mb-1.5 font-mono">
+                  TOTAL TICKET COUNT *
+                </label>
                 <input
                   type="number"
                   required
@@ -276,7 +312,9 @@ export default function TicketForm({ user, onClose, onSuccess }: TicketFormProps
 
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1.5 font-mono">EVENT VENUE *</label>
+              <label className="block text-xs font-medium text-gray-300 mb-1.5 font-mono">
+                EVENT VENUE *
+              </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
                   <MapPin className="h-4 w-4" />
@@ -294,7 +332,9 @@ export default function TicketForm({ user, onClose, onSuccess }: TicketFormProps
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-gray-300 mb-1.5 font-mono">DATE *</label>
+                <label className="block text-xs font-medium text-gray-300 mb-1.5 font-mono">
+                  DATE *
+                </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
                     <Calendar className="h-4 w-4" />
@@ -309,7 +349,9 @@ export default function TicketForm({ user, onClose, onSuccess }: TicketFormProps
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-300 mb-1.5 font-mono">TIME *</label>
+                <label className="block text-xs font-medium text-gray-300 mb-1.5 font-mono">
+                  TIME *
+                </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
                     <Clock className="h-4 w-4" />
@@ -350,7 +392,10 @@ export default function TicketForm({ user, onClose, onSuccess }: TicketFormProps
           </div>
           <div className="text-xs">
             <span className="font-bold text-white block">Automatic Revenue Split Enabled</span>
-            Upon successful ticket purchases through Paystack, you receive <strong className="text-gold">80% of earnings</strong> directly into your account balance, while <strong className="text-sky-light">20% commission</strong> is routed back to ETH (Event Ticket Hub).
+            Upon successful ticket purchases through Paystack, you receive{' '}
+            <strong className="text-gold">80% of earnings</strong> directly into your account
+            balance, while <strong className="text-sky-light">20% commission</strong> is routed back
+            to ETH (Event Ticket Hub).
           </div>
         </div>
 
@@ -379,8 +424,19 @@ export default function TicketForm({ user, onClose, onSuccess }: TicketFormProps
             {isUploading ? (
               <>
                 <svg className="animate-spin h-4 w-4 text-black" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
                 </svg>
                 <span>Uploading Assets...</span>
               </>
@@ -398,9 +454,7 @@ export default function TicketForm({ user, onClose, onSuccess }: TicketFormProps
         description={description}
         price={price}
         venue={venue}
-        coverImageSrc={
-          coverFile ? URL.createObjectURL(coverFile) : customCover || selectedCover
-        }
+        coverImageSrc={coverFile ? URL.createObjectURL(coverFile) : customCover || selectedCover}
       />
     </div>
   );

@@ -7,7 +7,9 @@ import { UserProfile } from '../types';
 interface HeaderProps {
   user: UserProfile | null;
   activeTab: 'marketplace' | 'producer_dashboard' | 'gate_auth' | 'admin_portal' | 'auth';
-  setActiveTab: (tab: 'marketplace' | 'producer_dashboard' | 'gate_auth' | 'admin_portal' | 'auth') => void;
+  setActiveTab: (
+    tab: 'marketplace' | 'producer_dashboard' | 'gate_auth' | 'admin_portal' | 'auth'
+  ) => void;
   onLogout: () => void;
   onOpenAuth: (role: 'producer' | 'buyer') => void;
 }
@@ -17,7 +19,7 @@ export default function Header({
   activeTab,
   setActiveTab,
   onLogout,
-  onOpenAuth
+  onOpenAuth,
 }: HeaderProps) {
   const [logoClicks, setLogoClicks] = useState(0);
 
@@ -25,7 +27,7 @@ export default function Header({
     <header className="sticky top-0 z-50 border-b border-white/10 px-4 md:px-8 bg-[#030712]/90 backdrop-blur-md flex flex-col justify-center py-4 md:py-3">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-2">
         {/* LOGO & BRANDING */}
-        <div 
+        <div
           onClick={() => {
             const newClicks = logoClicks + 1;
             setLogoClicks(newClicks);
@@ -37,19 +39,25 @@ export default function Header({
               setLogoClicks(0);
             } else {
               if (user) {
-                setActiveTab(user.role === 'admin' ? 'admin_portal' : user.role === 'producer' ? 'producer_dashboard' : 'marketplace');
+                setActiveTab(
+                  user.role === 'admin'
+                    ? 'admin_portal'
+                    : user.role === 'producer'
+                      ? 'producer_dashboard'
+                      : 'marketplace'
+                );
               } else {
                 setActiveTab('auth');
               }
             }
-          }} 
+          }}
           className="flex cursor-pointer items-center gap-2 sm:gap-3 transition-all hover:scale-[1.02]"
           id="brand-logo-container"
         >
           <div className="relative h-28 w-28 sm:h-32 sm:w-32 md:h-40 md:w-40 overflow-hidden rounded-lg border-2 border-gold bg-gradient-to-tr from-gold to-gold-dark p-0.5 shadow-[0_0_15px_rgba(251,191,36,0.4)]">
-            <img 
-              src={logoUrl} 
-              alt="ETH Logo" 
+            <img
+              src={logoUrl}
+              alt="ETH Logo"
               className="h-full w-full object-cover rounded-md"
               referrerPolicy="no-referrer"
             />
@@ -174,9 +182,7 @@ export default function Header({
                   <span className="max-w-[80px] truncate text-xs font-medium text-white">
                     {user.name}
                   </span>
-                  <span className="text-[9px] text-sky-light/80 capitalize">
-                    {user.role}
-                  </span>
+                  <span className="text-[9px] text-sky-light/80 capitalize">{user.role}</span>
                 </div>
               </div>
 
@@ -213,9 +219,7 @@ export default function Header({
             <button
               onClick={() => setActiveTab('marketplace')}
               className={`flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-                activeTab === 'marketplace'
-                  ? 'bg-sky-deep text-white'
-                  : 'text-gray-300 bg-white/5'
+                activeTab === 'marketplace' ? 'bg-sky-deep text-white' : 'text-gray-300 bg-white/5'
               }`}
               id="mobile-nav-market"
             >

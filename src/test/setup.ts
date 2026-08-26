@@ -14,7 +14,8 @@ const createMockQueryBuilder = () => {
     order: vi.fn(() => builder),
     single: vi.fn(() => builder),
     then: (resolve: any) => resolve({ data: null, error: new Error('Database offline in test') }),
-    catch: (reject: any) => Promise.resolve({ data: null, error: new Error('Database offline in test') }).catch(reject),
+    catch: (reject: any) =>
+      Promise.resolve({ data: null, error: new Error('Database offline in test') }).catch(reject),
   };
   return builder;
 };
@@ -30,19 +31,27 @@ vi.mock('@supabase/supabase-js', () => {
       })),
       auth: {
         signUp: vi.fn().mockResolvedValue({ data: null, error: new Error('Auth offline in test') }),
-        signInWithPassword: vi.fn().mockResolvedValue({ data: null, error: new Error('Auth offline in test') }),
+        signInWithPassword: vi
+          .fn()
+          .mockResolvedValue({ data: null, error: new Error('Auth offline in test') }),
         signOut: vi.fn().mockResolvedValue({ error: null }),
         getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }),
         resend: vi.fn().mockResolvedValue({ error: new Error('Auth offline in test') }),
       },
       storage: {
         from: vi.fn(() => ({
-          upload: vi.fn().mockResolvedValue({ data: null, error: new Error('Storage offline in test') }),
+          upload: vi
+            .fn()
+            .mockResolvedValue({ data: null, error: new Error('Storage offline in test') }),
           remove: vi.fn().mockResolvedValue({ data: null, error: null }),
-          getPublicUrl: vi.fn(() => ({ data: { publicUrl: 'https://test-project.supabase.co/storage/v1/object/public/test.jpg' } })),
-        }))
-      }
-    }))
+          getPublicUrl: vi.fn(() => ({
+            data: {
+              publicUrl: 'https://test-project.supabase.co/storage/v1/object/public/test.jpg',
+            },
+          })),
+        })),
+      },
+    })),
   };
 });
 

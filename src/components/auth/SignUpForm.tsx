@@ -141,7 +141,10 @@ export default function SignUpForm({
 
           <div>
             <label className="block text-xs font-medium text-gray-400 mb-1.5 font-mono uppercase tracking-wider flex items-center gap-1">
-              PHONE NUMBER <span className="text-[10px] text-gold-light font-normal font-sans">(For receiving payout of sales)</span>
+              PHONE NUMBER{' '}
+              <span className="text-[10px] text-gold-light font-normal font-sans">
+                (For receiving payout of sales)
+              </span>
             </label>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
@@ -161,7 +164,10 @@ export default function SignUpForm({
 
           <div>
             <label className="block text-xs font-medium text-gray-400 mb-1.5 font-mono uppercase tracking-wider flex items-center gap-1">
-              Settlement Bank <span className="text-[10px] text-gold-light font-normal font-sans">(For receiving automatic payouts)</span>
+              Settlement Bank{' '}
+              <span className="text-[10px] text-gold-light font-normal font-sans">
+                (For receiving automatic payouts)
+              </span>
             </label>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">

@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { 
-  subaccountSchema, 
-  paymentInitializeSchema, 
+import {
+  subaccountSchema,
+  paymentInitializeSchema,
   verificationCodeSchema,
   movieTicketSchema,
-  ticketPurchaseSchema
+  ticketPurchaseSchema,
 } from './schemas';
 
 describe('Zod Validation Schemas', () => {
@@ -14,7 +14,7 @@ describe('Zod Validation Schemas', () => {
         business_name: 'Silverbird Cinemas',
         settlement_bank: 'MTN',
         account_number: '0240000000',
-        primary_contact_email: 'producer@silverbird.com'
+        primary_contact_email: 'producer@silverbird.com',
       };
       const result = subaccountSchema.safeParse(valid);
       expect(result.success).toBe(true);
@@ -25,7 +25,7 @@ describe('Zod Validation Schemas', () => {
         business_name: 'S',
         settlement_bank: '',
         account_number: '123',
-        primary_contact_email: 'not-an-email'
+        primary_contact_email: 'not-an-email',
       };
       const result = subaccountSchema.safeParse(invalid);
       expect(result.success).toBe(false);
@@ -38,7 +38,7 @@ describe('Zod Validation Schemas', () => {
         email: 'customer@test.com',
         amount: 100,
         subaccount_code: 'ACCT_12345',
-        callback_url: 'https://example.com/callback'
+        callback_url: 'https://example.com/callback',
       };
       const result = paymentInitializeSchema.safeParse(valid);
       expect(result.success).toBe(true);
@@ -47,7 +47,7 @@ describe('Zod Validation Schemas', () => {
     it('rejects zero or negative amounts', () => {
       const invalid = {
         email: 'customer@test.com',
-        amount: -5
+        amount: -5,
       };
       const result = paymentInitializeSchema.safeParse(invalid);
       expect(result.success).toBe(false);
@@ -59,7 +59,7 @@ describe('Zod Validation Schemas', () => {
       const valid = {
         email: 'user@example.com',
         code: '123456',
-        purpose: 'password_reset'
+        purpose: 'password_reset',
       };
       const result = verificationCodeSchema.safeParse(valid);
       expect(result.success).toBe(true);
@@ -81,7 +81,7 @@ describe('Zod Validation Schemas', () => {
         totalQuantity: 150,
         availableQuantity: 150,
         coverUrl: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1',
-        category: 'movie' as const
+        category: 'movie' as const,
       };
       const result = movieTicketSchema.safeParse(valid);
       expect(result.success).toBe(true);
@@ -101,7 +101,7 @@ describe('Zod Validation Schemas', () => {
         producerEarning: 56,
         hubEarning: 14,
         purchasedAt: '2026-08-16T12:00:00Z',
-        status: 'unused' as const
+        status: 'unused' as const,
       };
       const result = ticketPurchaseSchema.safeParse(valid);
       expect(result.success).toBe(true);

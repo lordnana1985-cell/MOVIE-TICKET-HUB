@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
-import { 
-  Film, 
-  Sparkles, 
-  ShieldAlert, 
-  CheckCircle2, 
+import {
+  Film,
+  Sparkles,
+  ShieldAlert,
+  CheckCircle2,
   HelpCircle,
   TrendingUp,
   Cpu,
-  Tv
+  Tv,
 } from 'lucide-react';
 import { UserProfile, MovieTicket, TicketPurchase } from './types';
 import { db, getSupabaseStatus } from './lib/db';
@@ -34,9 +34,9 @@ export default function App() {
     return null;
   });
 
-
-
-  const [activeTab, setActiveTab] = useState<'marketplace' | 'producer_dashboard' | 'gate_auth' | 'admin_portal' | 'auth'>(() => {
+  const [activeTab, setActiveTab] = useState<
+    'marketplace' | 'producer_dashboard' | 'gate_auth' | 'admin_portal' | 'auth'
+  >(() => {
     const savedUser = localStorage.getItem('mt_hub_current_user');
     if (savedUser) {
       try {
@@ -55,11 +55,14 @@ export default function App() {
   });
 
   const [authModalRole, setAuthModalRole] = useState<'producer' | 'buyer' | 'admin'>('buyer');
-  
+
   // Shared Live States
   const [tickets, setTickets] = useState<MovieTicket[]>([]);
   const [purchases, setPurchases] = useState<TicketPurchase[]>([]);
-  const [alertMessage, setAlertMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [alertMessage, setAlertMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
 
   // Sync session and load database items
   useEffect(() => {
@@ -131,11 +134,14 @@ export default function App() {
         if (getSupabaseStatus().configured) {
           const isEmailConfirmed = await db.checkUserEmailConfirmed();
           if (!isEmailConfirmed) {
-            logger.warn("User email not verified on reload. Logging out...", 'App');
+            logger.warn('User email not verified on reload. Logging out...', 'App');
             localStorage.removeItem('mt_hub_current_user');
             setUser(null);
             setActiveTab('auth');
-            triggerAlert('error', 'Your email is not verified yet. Please check your inbox and verify your email before viewing your dashboard.');
+            triggerAlert(
+              'error',
+              'Your email is not verified yet. Please check your inbox and verify your email before viewing your dashboard.'
+            );
             return;
           }
         }
@@ -143,7 +149,7 @@ export default function App() {
         // Reload user stats/profile balance too
         const updatedProfile = await db.getUserProfile(user.id);
         if (updatedProfile) {
-          setUser(prev => {
+          setUser((prev) => {
             if (!prev) return updatedProfile;
             if (
               prev.id === updatedProfile.id &&
@@ -161,11 +167,14 @@ export default function App() {
           });
           localStorage.setItem('mt_hub_current_user', JSON.stringify(updatedProfile));
         } else {
-          logger.warn("User account was removed. Logging out...", 'App');
+          logger.warn('User account was removed. Logging out...', 'App');
           localStorage.removeItem('mt_hub_current_user');
           setUser(null);
           setActiveTab('auth');
-          triggerAlert('error', 'Your session expired or your account has been removed. Please sign in again.');
+          triggerAlert(
+            'error',
+            'Your session expired or your account has been removed. Please sign in again.'
+          );
           return;
         }
 
@@ -192,7 +201,7 @@ export default function App() {
   const handleAuthSuccess = (profile: UserProfile) => {
     setUser(profile);
     localStorage.setItem('mt_hub_current_user', JSON.stringify(profile));
-    
+
     // Redirect producers to their console, buyers stay on market
     if (profile.role === 'producer') {
       setActiveTab('producer_dashboard');
@@ -210,10 +219,15 @@ export default function App() {
     setTimeout(() => setAlertMessage(null), 4000);
   };
 
-  const handleNavigationChange = (tab: 'marketplace' | 'producer_dashboard' | 'gate_auth' | 'admin_portal' | 'auth') => {
+  const handleNavigationChange = (
+    tab: 'marketplace' | 'producer_dashboard' | 'gate_auth' | 'admin_portal' | 'auth'
+  ) => {
     if (!user) {
       setActiveTab('auth');
-      triggerAlert('error', 'Authentication required: Please sign in or register first to explore the market.');
+      triggerAlert(
+        'error',
+        'Authentication required: Please sign in or register first to explore the market.'
+      );
       return;
     }
 
@@ -232,7 +246,10 @@ export default function App() {
       }
     } else if (user.role === 'admin') {
       if (tab !== 'admin_portal' && tab !== 'marketplace' && tab !== 'auth') {
-        triggerAlert('error', 'Access Blocked: Admins are restricted to Admin Portal and Marketplace.');
+        triggerAlert(
+          'error',
+          'Access Blocked: Admins are restricted to Admin Portal and Marketplace.'
+        );
         setActiveTab('admin_portal');
         return;
       }
@@ -252,7 +269,7 @@ export default function App() {
       <div className="absolute bottom-[10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-gold/5 blur-[150px] pointer-events-none" />
 
       {/* HEADER CONTROLLER */}
-      <Header 
+      <Header
         user={user}
         activeTab={activeTab}
         setActiveTab={handleNavigationChange}
@@ -283,7 +300,7 @@ export default function App() {
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-8 md:px-8 relative z-10">
         {/* VIEW ROUTER */}
         {activeTab === 'marketplace' && (
-          <Marketplace 
+          <Marketplace
             user={user}
             tickets={tickets}
             purchases={purchases}
@@ -293,7 +310,7 @@ export default function App() {
         )}
 
         {activeTab === 'producer_dashboard' && user && user.role === 'producer' && (
-          <ProducerDashboard 
+          <ProducerDashboard
             user={user}
             onTicketCreated={reloadData}
             setActiveTab={handleNavigationChange}
@@ -301,24 +318,15 @@ export default function App() {
         )}
 
         {activeTab === 'admin_portal' && user && user.role === 'admin' && (
-          <AdminPortal 
-            user={user}
-            tickets={tickets}
-            onDataChanged={reloadData}
-          />
+          <AdminPortal user={user} tickets={tickets} onDataChanged={reloadData} />
         )}
 
         {activeTab === 'gate_auth' && user && user.role === 'producer' && (
-          <GateScanner 
-            user={user}
-          />
+          <GateScanner user={user} />
         )}
 
         {activeTab === 'auth' && (
-          <AuthPage 
-            initialRole={authModalRole}
-            onAuthSuccess={handleAuthSuccess}
-          />
+          <AuthPage initialRole={authModalRole} onAuthSuccess={handleAuthSuccess} />
         )}
       </main>
 
@@ -328,12 +336,20 @@ export default function App() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 py-2 border-b border-white/5 mb-4 text-xs font-mono">
             <span className="text-gray-400">Need immediate help? Contact Support:</span>
             <div className="flex items-center gap-4 flex-wrap justify-center">
-              <a href="https://wa.me/233543198585" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 transition-colors">
+              <a
+                href="https://wa.me/233543198585"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 transition-colors"
+              >
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span>WhatsApp (0543198585)</span>
               </a>
               <span className="text-gray-600 hidden sm:inline">|</span>
-              <a href="tel:0543198585" className="flex items-center gap-1.5 text-sky-light hover:text-sky-300 transition-colors">
+              <a
+                href="tel:0543198585"
+                className="flex items-center gap-1.5 text-sky-light hover:text-sky-300 transition-colors"
+              >
                 <span>Call (0543198585)</span>
               </a>
             </div>

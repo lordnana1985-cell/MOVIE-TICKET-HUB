@@ -10,17 +10,34 @@ interface LogPayload {
 }
 
 class StructuredLogger {
-  private isDevelopment = typeof process !== 'undefined' ? process.env.NODE_ENV !== 'production' : true;
-  private isTest = typeof process !== 'undefined' ? process.env.NODE_ENV === 'test' || !!process.env.VITEST : false;
+  private isDevelopment =
+    typeof process !== 'undefined' ? process.env.NODE_ENV !== 'production' : true;
+  private isTest =
+    typeof process !== 'undefined'
+      ? process.env.NODE_ENV === 'test' || !!process.env.VITEST
+      : false;
 
-  private format(level: LogLevel, message: string, context?: string, data?: any, error?: any): LogPayload {
+  private format(
+    level: LogLevel,
+    message: string,
+    context?: string,
+    data?: any,
+    error?: any
+  ): LogPayload {
     return {
       level,
       message,
       context,
       timestamp: new Date().toISOString(),
       ...(data !== undefined ? { data } : {}),
-      ...(error !== undefined ? { error: error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : error } : {}),
+      ...(error !== undefined
+        ? {
+            error:
+              error instanceof Error
+                ? { name: error.name, message: error.message, stack: error.stack }
+                : error,
+          }
+        : {}),
     };
   }
 

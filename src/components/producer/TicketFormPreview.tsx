@@ -25,10 +25,7 @@ export default function TicketFormPreview({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
       <div className="relative w-full max-w-lg rounded-2xl glass-panel border border-gold/40 p-6 shadow-2xl">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white"
-        >
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">
           <X className="h-5 w-5" />
         </button>
         <h4 className="text-base font-bold text-gold font-display mb-4">Ticket Preview</h4>

@@ -28,7 +28,9 @@ export default function AdminPortal({
   // Search and Filter states
   const [ticketSearch, setTicketSearch] = useState('');
   const [profileSearch, setProfileSearch] = useState('');
-  const [profileRoleFilter, setProfileRoleFilter] = useState<'all' | 'producer' | 'buyer' | 'admin'>('all');
+  const [profileRoleFilter, setProfileRoleFilter] = useState<
+    'all' | 'producer' | 'buyer' | 'admin'
+  >('all');
 
   // Confirmation Modals state
   const [ticketToDelete, setTicketToDelete] = useState<MovieTicket | null>(null);
@@ -95,7 +97,9 @@ export default function AdminPortal({
 
       const result = await db.deleteProfile(targetProfile.id);
       if (result) {
-        setSuccess(`Account for "${targetProfile.name}" (${targetProfile.role}) was successfully deleted.`);
+        setSuccess(
+          `Account for "${targetProfile.name}" (${targetProfile.role}) was successfully deleted.`
+        );
         setProfileToDelete(null);
         onDataChanged();
       } else {
@@ -152,7 +156,8 @@ export default function AdminPortal({
             SYSTEM CONTROL PANEL
           </h2>
           <p className="text-xs text-gray-400 mt-1">
-            Oversee tickets, terminate rogue assets, and delete producer or buyer accounts from the core database.
+            Oversee tickets, terminate rogue assets, and delete producer or buyer accounts from the
+            core database.
           </p>
         </div>
         <button
@@ -160,7 +165,9 @@ export default function AdminPortal({
           disabled={loading}
           className="self-start md:self-center flex items-center gap-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 px-4 py-2.5 text-xs font-mono font-bold text-white transition-all cursor-pointer"
         >
-          <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin text-rose-500' : 'text-gray-400'}`} />
+          <RefreshCw
+            className={`h-3.5 w-3.5 ${loading ? 'animate-spin text-rose-500' : 'text-gray-400'}`}
+          />
           <span>REFRESH SYSTEM RECORDS</span>
         </button>
       </div>

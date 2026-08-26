@@ -14,14 +14,13 @@ export default function EventTicketCard({
   onAddToCart,
 }: EventTicketCardProps) {
   const cat = ticket.category || 'movie';
-  const badgeStyles =
-    {
-      movie: { bg: 'bg-cyan-500/90 text-white', label: 'Movie', icon: Play },
-      music: { bg: 'bg-fuchsia-500/90 text-white', label: 'Music', icon: Music },
-      beauty: { bg: 'bg-rose-500/90 text-white', label: 'Pageant', icon: Crown },
-      campus: { bg: 'bg-emerald-500/90 text-white', label: 'Campus', icon: GraduationCap },
-      other: { bg: 'bg-indigo-500/90 text-white', label: 'Event', icon: Ticket },
-    }[cat] || { bg: 'bg-cyan-500/90 text-white', label: 'Movie', icon: Play };
+  const badgeStyles = {
+    movie: { bg: 'bg-cyan-500/90 text-white', label: 'Movie', icon: Play },
+    music: { bg: 'bg-fuchsia-500/90 text-white', label: 'Music', icon: Music },
+    beauty: { bg: 'bg-rose-500/90 text-white', label: 'Pageant', icon: Crown },
+    campus: { bg: 'bg-emerald-500/90 text-white', label: 'Campus', icon: GraduationCap },
+    other: { bg: 'bg-indigo-500/90 text-white', label: 'Event', icon: Ticket },
+  }[cat] || { bg: 'bg-cyan-500/90 text-white', label: 'Movie', icon: Play };
 
   const IconComp = badgeStyles.icon;
 

@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { 
-  checkEmailExists, 
-  checkEmailOppositeRole, 
-  registerUser, 
-  loginUser, 
-  getUserProfile, 
+import {
+  checkEmailExists,
+  checkEmailOppositeRole,
+  registerUser,
+  loginUser,
+  getUserProfile,
   updateUserProfile,
-  getAllProfiles
+  getAllProfiles,
 } from './profiles';
 import { UserProfile } from '../../types';
 

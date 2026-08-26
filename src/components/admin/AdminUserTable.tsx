@@ -22,7 +22,10 @@ export default function AdminUserTable({
   onSelectProfileToDelete,
 }: AdminUserTableProps) {
   return (
-    <div className="glass-panel rounded-2xl border border-white/5 p-6 space-y-4" id="admin-user-table-container">
+    <div
+      className="glass-panel rounded-2xl border border-white/5 p-6 space-y-4"
+      id="admin-user-table-container"
+    >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-3">
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-rose-500" />
@@ -82,8 +85,8 @@ export default function AdminUserTable({
                     profile.role === 'admin'
                       ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
                       : profile.role === 'producer'
-                      ? 'bg-gold/10 text-gold border-gold/30'
-                      : 'bg-sky-500/10 text-sky-400 border-sky-500/30'
+                        ? 'bg-gold/10 text-gold border-gold/30'
+                        : 'bg-sky-500/10 text-sky-400 border-sky-500/30'
                   }`}
                 >
                   {profile.name.substring(0, 2).toUpperCase()}
@@ -96,8 +99,8 @@ export default function AdminUserTable({
                         profile.role === 'admin'
                           ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
                           : profile.role === 'producer'
-                          ? 'bg-gold/20 text-gold border border-gold/30'
-                          : 'bg-sky-500/20 text-sky-450 border border-sky-400/20'
+                            ? 'bg-gold/20 text-gold border border-gold/30'
+                            : 'bg-sky-500/20 text-sky-450 border border-sky-400/20'
                       }`}
                     >
                       {profile.role}

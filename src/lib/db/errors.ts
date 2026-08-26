@@ -21,9 +21,21 @@ export class DbError extends AppError {
     Object.setPrototypeOf(this, new.target.prototype);
   }
 
-  public static fromError(operation: string, error: unknown, fallbackUsed = false, customMessage?: string): DbError {
-    const rawMessage = error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown database error';
-    const message = customMessage ? `${customMessage}: ${rawMessage}` : `Database error during ${operation}: ${rawMessage}`;
+  public static fromError(
+    operation: string,
+    error: unknown,
+    fallbackUsed = false,
+    customMessage?: string
+  ): DbError {
+    const rawMessage =
+      error instanceof Error
+        ? error.message
+        : typeof error === 'string'
+          ? error
+          : 'Unknown database error';
+    const message = customMessage
+      ? `${customMessage}: ${rawMessage}`
+      : `Database error during ${operation}: ${rawMessage}`;
     return new DbError(message, {
       operation,
       cause: error,

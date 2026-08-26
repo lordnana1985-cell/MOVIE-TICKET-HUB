@@ -208,10 +208,7 @@ export default function Marketplace({
       </div>
 
       {/* YOUTUBE / VIDEO LIGHTBOX MODAL */}
-      <TrailerLightboxModal
-        ticket={selectedTrailer}
-        onClose={() => setSelectedTrailer(null)}
-      />
+      <TrailerLightboxModal ticket={selectedTrailer} onClose={() => setSelectedTrailer(null)} />
 
       {/* SHOPPING CART DRAWER */}
       <CartDrawer

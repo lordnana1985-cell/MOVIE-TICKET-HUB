@@ -16,7 +16,10 @@ export default function AdminTicketTable({
   onSelectTicketToDelete,
 }: AdminTicketTableProps) {
   return (
-    <div className="glass-panel rounded-2xl border border-white/5 p-6 space-y-4" id="admin-ticket-table-container">
+    <div
+      className="glass-panel rounded-2xl border border-white/5 p-6 space-y-4"
+      id="admin-ticket-table-container"
+    >
       <div className="flex items-center justify-between border-b border-white/5 pb-3">
         <div className="flex items-center gap-2">
           <Video className="h-4 w-4 text-rose-500" />
@@ -75,7 +78,8 @@ export default function AdminTicketTable({
                     By: <span className="text-gray-200">{ticket.producerName}</span>
                   </p>
                   <p className="text-[10px] text-rose-500 font-mono mt-0.5">
-                    GH₵{ticket.price.toLocaleString()} • Qty: {ticket.availableQuantity}/{ticket.totalQuantity}
+                    GH₵{ticket.price.toLocaleString()} • Qty: {ticket.availableQuantity}/
+                    {ticket.totalQuantity}
                   </p>
                 </div>
                 <span className="text-[9px] text-gray-500 font-mono uppercase truncate mt-1">

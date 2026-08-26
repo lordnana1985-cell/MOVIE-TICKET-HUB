@@ -25,7 +25,10 @@ export default function AdminModals({
     <>
       {/* 1. TICKET DELETE CONFIRM MODAL */}
       {ticketToDelete && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn" id="admin-ticket-delete-modal">
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn"
+          id="admin-ticket-delete-modal"
+        >
           <div className="w-full max-w-md rounded-2xl bg-[#090d16] border border-rose-500/20 p-6 shadow-2xl space-y-4 animate-scaleUp">
             <div className="flex items-start gap-3">
               <div className="rounded-full bg-rose-500/10 p-2 text-rose-400 shrink-0">
@@ -34,7 +37,9 @@ export default function AdminModals({
               <div>
                 <h3 className="text-base font-bold text-white">Delete Event Ticket?</h3>
                 <p className="text-xs text-gray-400 mt-1">
-                  You are about to permanently delete <strong className="text-white">"{ticketToDelete.title}"</strong>. This will remove it from the market and terminate associated sales pipelines.
+                  You are about to permanently delete{' '}
+                  <strong className="text-white">"{ticketToDelete.title}"</strong>. This will remove
+                  it from the market and terminate associated sales pipelines.
                 </p>
               </div>
             </div>
@@ -44,7 +49,8 @@ export default function AdminModals({
                 <strong>Organiser:</strong> {ticketToDelete.producerName}
               </p>
               <p className="text-gray-400">
-                <strong>Available Quantity:</strong> {ticketToDelete.availableQuantity} of {ticketToDelete.totalQuantity}
+                <strong>Available Quantity:</strong> {ticketToDelete.availableQuantity} of{' '}
+                {ticketToDelete.totalQuantity}
               </p>
               <p className="text-gray-400">
                 <strong>Price:</strong> GH₵{ticketToDelete.price.toLocaleString()}
@@ -75,7 +81,10 @@ export default function AdminModals({
 
       {/* 2. PROFILE DELETE CONFIRM MODAL */}
       {profileToDelete && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn" id="admin-profile-delete-modal">
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn"
+          id="admin-profile-delete-modal"
+        >
           <div className="w-full max-w-md rounded-2xl bg-[#090d16] border border-rose-500/20 p-6 shadow-2xl space-y-4 animate-scaleUp">
             <div className="flex items-start gap-3">
               <div className="rounded-full bg-red-600/10 p-2 text-red-500 shrink-0">
@@ -84,7 +93,9 @@ export default function AdminModals({
               <div>
                 <h3 className="text-base font-bold text-white">Permanently Remove Account?</h3>
                 <p className="text-xs text-gray-400 mt-1">
-                  This action is IRREVERSIBLE! You are deleting <strong className="text-white">"{profileToDelete.name}"</strong> ({profileToDelete.role}).
+                  This action is IRREVERSIBLE! You are deleting{' '}
+                  <strong className="text-white">"{profileToDelete.name}"</strong> (
+                  {profileToDelete.role}).
                 </p>
               </div>
             </div>
@@ -94,12 +105,16 @@ export default function AdminModals({
               <ul className="list-disc pl-4 space-y-1 text-gray-300">
                 {profileToDelete.role === 'producer' ? (
                   <>
-                    <li>ALL tickets published by this organiser will be wiped out from the market.</li>
+                    <li>
+                      ALL tickets published by this organiser will be wiped out from the market.
+                    </li>
                     <li>The associated Paystack subaccount links will be broken.</li>
                   </>
                 ) : (
                   <>
-                    <li>All purchases and transaction histories made by this buyer will be wiped out.</li>
+                    <li>
+                      All purchases and transaction histories made by this buyer will be wiped out.
+                    </li>
                     <li>Their gate credentials and logs will be deleted.</li>
                   </>
                 )}

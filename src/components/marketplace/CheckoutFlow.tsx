@@ -47,7 +47,9 @@ export default function CheckoutFlow({
       for (const item of cart) {
         for (let i = 0; i < item.quantity; i++) {
           const refId =
-            customRef || pendingPaystackRef || `pstk_${Math.random().toString(36).substring(2, 15)}`;
+            customRef ||
+            pendingPaystackRef ||
+            `pstk_${Math.random().toString(36).substring(2, 15)}`;
           const priceVal = item.ticket.price;
           const producerEarning = priceVal * 0.8;
           const hubEarning = priceVal * 0.2;
@@ -106,7 +108,8 @@ export default function CheckoutFlow({
         await handleConfirmPayment(referenceToVerify);
       } else {
         setPaymentError(
-          result.message || 'Payment verification failed. Please complete authorization in the gateway first.'
+          result.message ||
+            'Payment verification failed. Please complete authorization in the gateway first.'
         );
       }
     } catch (err: any) {

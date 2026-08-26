@@ -11,8 +11,8 @@ vi.mock('../lib/db', () => ({
     getGateLogs: vi.fn(() => Promise.resolve([])),
     getPurchasesForProducer: vi.fn(() => Promise.resolve([])),
     getPurchasesForBuyer: vi.fn(() => Promise.resolve([])),
-    getTickets: vi.fn(() => Promise.resolve([]))
-  }
+    getTickets: vi.fn(() => Promise.resolve([])),
+  },
 }));
 
 const mockProducerUser: UserProfile = {
@@ -21,7 +21,7 @@ const mockProducerUser: UserProfile = {
   name: 'Cinema Producer',
   role: 'producer',
   companyName: 'Cinema Corp',
-  balance: 500
+  balance: 500,
 };
 
 describe('GateScanner Component Unit Tests', () => {
@@ -34,7 +34,7 @@ describe('GateScanner Component Unit Tests', () => {
 
   it('renders Gate Access Scanner interface with title and input', () => {
     render(<GateScanner user={mockProducerUser} />);
-    
+
     expect(screen.getByText(/Gatekeeper/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/Enter Ticket Pass Code/i)).toBeInTheDocument();
   });
@@ -49,12 +49,12 @@ describe('GateScanner Component Unit Tests', () => {
         movieTitle: 'Inception',
         buyerName: 'John Doe',
         amountPaid: 50,
-        status: 'used'
-      }
+        status: 'used',
+      },
     });
 
     render(<GateScanner user={mockProducerUser} />);
-    
+
     const input = screen.getByPlaceholderText(/Enter Ticket Pass Code/i);
     fireEvent.change(input, { target: { value: 'TICK-999' } });
 
@@ -69,11 +69,11 @@ describe('GateScanner Component Unit Tests', () => {
   it('triggers authentication on failed verification', async () => {
     (db.authenticateTicket as any).mockResolvedValue({
       success: false,
-      message: 'Invalid ticket reference! This ticket does not exist in our system.'
+      message: 'Invalid ticket reference! This ticket does not exist in our system.',
     });
 
     render(<GateScanner user={mockProducerUser} />);
-    
+
     const input = screen.getByPlaceholderText(/Enter Ticket Pass Code/i);
     fireEvent.change(input, { target: { value: 'INVALID-CODE' } });
 

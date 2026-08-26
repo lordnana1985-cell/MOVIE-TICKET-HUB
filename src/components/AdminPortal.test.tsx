@@ -69,13 +69,7 @@ describe('AdminPortal Component', () => {
   });
 
   it('renders admin dashboard with system control header, metrics, and directories', async () => {
-    render(
-      <AdminPortal
-        user={mockAdminUser}
-        tickets={mockTickets}
-        onDataChanged={vi.fn()}
-      />
-    );
+    render(<AdminPortal user={mockAdminUser} tickets={mockTickets} onDataChanged={vi.fn()} />);
 
     expect(screen.getByText(/SYSTEM CONTROL PANEL/i)).toBeInTheDocument();
     expect(screen.getByText(/ADMINISTRATIVE OVERWATCH/i)).toBeInTheDocument();
@@ -92,11 +86,7 @@ describe('AdminPortal Component', () => {
     const onDataChanged = vi.fn();
 
     render(
-      <AdminPortal
-        user={mockAdminUser}
-        tickets={mockTickets}
-        onDataChanged={onDataChanged}
-      />
+      <AdminPortal user={mockAdminUser} tickets={mockTickets} onDataChanged={onDataChanged} />
     );
 
     await waitFor(() => {
@@ -122,11 +112,7 @@ describe('AdminPortal Component', () => {
     const onDataChanged = vi.fn();
 
     render(
-      <AdminPortal
-        user={mockAdminUser}
-        tickets={mockTickets}
-        onDataChanged={onDataChanged}
-      />
+      <AdminPortal user={mockAdminUser} tickets={mockTickets} onDataChanged={onDataChanged} />
     );
 
     await waitFor(() => {

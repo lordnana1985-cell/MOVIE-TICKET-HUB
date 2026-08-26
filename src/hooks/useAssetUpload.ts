@@ -68,9 +68,15 @@ export function useAssetUpload() {
           const ext = coverFile.name.split('.').pop() || 'jpg';
           const uuid = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
           const cleanPath = `${userId}/covers/${ticketId}/${uuid}.${ext}`;
-          finalCoverUrl = await db.uploadFile('producers-assets', cleanPath, coverFile, true, (percent) => {
-            setUploadStatus(`Uploading cover artwork: ${percent}%`);
-          });
+          finalCoverUrl = await db.uploadFile(
+            'producers-assets',
+            cleanPath,
+            coverFile,
+            true,
+            (percent) => {
+              setUploadStatus(`Uploading cover artwork: ${percent}%`);
+            }
+          );
         }
 
         let formattedTrailer = trailerUrl.trim();
@@ -85,9 +91,15 @@ export function useAssetUpload() {
           const ext = videoFile.name.split('.').pop() || 'mp4';
           const uuid = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
           const cleanPath = `${userId}/videos/${ticketId}/${uuid}.${ext}`;
-          formattedTrailer = await db.uploadFile('producers-assets', cleanPath, videoFile, true, (percent) => {
-            setUploadStatus(`Uploading trailer video: ${percent}%`);
-          });
+          formattedTrailer = await db.uploadFile(
+            'producers-assets',
+            cleanPath,
+            videoFile,
+            true,
+            (percent) => {
+              setUploadStatus(`Uploading trailer video: ${percent}%`);
+            }
+          );
         } else {
           formattedTrailer = formatTrailerUrl(formattedTrailer);
         }

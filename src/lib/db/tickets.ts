@@ -1,14 +1,14 @@
 import { MovieTicket } from '../../types';
-import { 
-  supabase, 
-  isSupabaseConfigured, 
-  setSupabaseLastError, 
-  getLocalData, 
-  setLocalData, 
-  getDeletedTicketIds, 
-  addDeletedTicketId, 
-  removeDeletedTicketId, 
-  notifyTicketsChanged 
+import {
+  supabase,
+  isSupabaseConfigured,
+  setSupabaseLastError,
+  getLocalData,
+  setLocalData,
+  getDeletedTicketIds,
+  addDeletedTicketId,
+  removeDeletedTicketId,
+  notifyTicketsChanged,
 } from './client';
 import { DEFAULT_MOVIES } from './mockData';
 import { logger } from '../logger';
@@ -28,11 +28,13 @@ export async function getTickets(): Promise<MovieTicket[]> {
       if (error) throw error;
       if (data) {
         supabaseTickets = data
-          .filter(m => !deletedIds.has(m.id))
-          .map(m => {
+          .filter((m) => !deletedIds.has(m.id))
+          .map((m) => {
             const catMatch = m.description ? m.description.match(/<!--CAT:(\w+)-->/) : null;
             const category = catMatch ? catMatch[1] : 'movie';
-            const cleanDescription = m.description ? m.description.replace(/<!--CAT:\w+-->/, '').trim() : (m.description || '');
+            const cleanDescription = m.description
+              ? m.description.replace(/<!--CAT:\w+-->/, '').trim()
+              : m.description || '';
             return {
               id: m.id,
               title: m.title,
@@ -49,7 +51,7 @@ export async function getTickets(): Promise<MovieTicket[]> {
               coverUrl: m.cover_url,
               createdAt: m.created_at,
               category: category as any,
-              isLocalOnly: false
+              isLocalOnly: false,
             };
           });
         fetchSucceeded = true;
@@ -57,11 +59,16 @@ export async function getTickets(): Promise<MovieTicket[]> {
     } catch (e: unknown) {
       const dbErr = DbError.fromError('getTickets', e, true);
       setSupabaseLastError(dbErr.message);
-      logger.debug('Supabase getTickets failed, falling back to LocalStorage', 'tickets', { error: dbErr.message });
+      logger.debug('Supabase getTickets failed, falling back to LocalStorage', 'tickets', {
+        error: dbErr.message,
+      });
     }
   }
 
-  const simulationsCleared = typeof window !== 'undefined' && window.localStorage && localStorage.getItem('mt_hub_simulations_cleared') === 'true';
+  const simulationsCleared =
+    typeof window !== 'undefined' &&
+    window.localStorage &&
+    localStorage.getItem('mt_hub_simulations_cleared') === 'true';
   const defaultInitial = simulationsCleared ? [] : DEFAULT_MOVIES;
   const localTickets = getLocalData<MovieTicket[]>('tickets', defaultInitial);
   const uniqueLocalTicketsCleaned: MovieTicket[] = [];
@@ -71,11 +78,13 @@ export async function getTickets(): Promise<MovieTicket[]> {
       seenTicketIds.add(t.id);
       const catMatch = t.description ? t.description.match(/<!--CAT:(\w+)-->/) : null;
       const category = t.category || (catMatch ? catMatch[1] : 'movie');
-      const cleanDescription = t.description ? t.description.replace(/<!--CAT:\w+-->/, '').trim() : (t.description || '');
+      const cleanDescription = t.description
+        ? t.description.replace(/<!--CAT:\w+-->/, '').trim()
+        : t.description || '';
       uniqueLocalTicketsCleaned.push({
         ...t,
         description: cleanDescription,
-        category: category as any
+        category: category as any,
       });
     }
   }
@@ -86,18 +95,24 @@ export async function getTickets(): Promise<MovieTicket[]> {
   if (fetchSucceeded) {
     const merged = [...supabaseTickets];
     for (const localT of uniqueLocalTicketsCleaned) {
-      if (localT.isLocalOnly && !deletedIds.has(localT.id) && !merged.some(t => t.id === localT.id)) {
+      if (
+        localT.isLocalOnly &&
+        !deletedIds.has(localT.id) &&
+        !merged.some((t) => t.id === localT.id)
+      ) {
         merged.push(localT);
       }
     }
-    const sorted = merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const sorted = merged.sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
     setLocalData('tickets', sorted);
     return sorted;
   }
 
   const finalLocalList = uniqueLocalTicketsCleaned
-    .filter(t => !deletedIds.has(t.id))
-    .map(t => ({ ...t, isLocalOnly: true }));
+    .filter((t) => !deletedIds.has(t.id))
+    .map((t) => ({ ...t, isLocalOnly: true }));
   setLocalData('tickets', finalLocalList);
   return finalLocalList;
 }
@@ -124,15 +139,17 @@ export async function createTicket(ticket: MovieTicket): Promise<MovieTicket> {
           total_quantity: ticket.totalQuantity,
           available_quantity: ticket.availableQuantity,
           cover_url: ticket.coverUrl,
-          created_at: ticket.createdAt
-        }
+          created_at: ticket.createdAt,
+        },
       ]);
       if (error) throw error;
       isSyncedToSupabase = true;
     } catch (e: unknown) {
       const dbErr = DbError.fromError('createTicket', e, true);
       setSupabaseLastError(dbErr.message);
-      logger.debug('Supabase createTicket failed, falling back to LocalStorage', 'tickets', { error: dbErr.message });
+      logger.debug('Supabase createTicket failed, falling back to LocalStorage', 'tickets', {
+        error: dbErr.message,
+      });
     }
   }
 
@@ -140,7 +157,7 @@ export async function createTicket(ticket: MovieTicket): Promise<MovieTicket> {
   const localSavedTicket = {
     ...ticket,
     description: descriptionWithCat,
-    isLocalOnly: !isSyncedToSupabase
+    isLocalOnly: !isSyncedToSupabase,
   };
   tickets.unshift(localSavedTicket);
   setLocalData('tickets', tickets);
@@ -152,7 +169,7 @@ export async function deleteTicket(id: string, skipNotification = false): Promis
   addDeletedTicketId(id);
 
   const tickets = getLocalData<MovieTicket[]>('tickets', []);
-  const filtered = tickets.filter(t => t.id !== id);
+  const filtered = tickets.filter((t) => t.id !== id);
   setLocalData('tickets', filtered);
 
   if (isSupabaseConfigured && supabase) {
@@ -166,7 +183,10 @@ export async function deleteTicket(id: string, skipNotification = false): Promis
       if (ticket) {
         const filesToDelete: string[] = [];
 
-        const getStoragePathFromUrl = (url: string, bucketName: string = 'producers-assets'): string | null => {
+        const getStoragePathFromUrl = (
+          url: string,
+          bucketName: string = 'producers-assets'
+        ): string | null => {
           if (!url || url.startsWith('data:')) return null;
 
           const searchStr = `/public/${bucketName}/`;
@@ -225,17 +245,16 @@ export async function deleteTicket(id: string, skipNotification = false): Promis
         logger.debug('Non-blocking ticket_purchases deletion error', 'tickets', { dbErr });
       }
 
-      const { error } = await supabase
-        .from('movie_tickets')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('movie_tickets').delete().eq('id', id);
       if (error) {
         throw error;
       }
     } catch (e: unknown) {
       const dbErr = DbError.fromError('deleteTicket', e, true);
       setSupabaseLastError(dbErr.message);
-      logger.warn('Supabase deleteTicket failed, falling back to LocalStorage', 'tickets', { error: dbErr.message });
+      logger.warn('Supabase deleteTicket failed, falling back to LocalStorage', 'tickets', {
+        error: dbErr.message,
+      });
     }
   }
 
@@ -247,8 +266,8 @@ export async function deleteTicket(id: string, skipNotification = false): Promis
 
 export async function clearAllTickets(): Promise<boolean> {
   const localTickets = getLocalData<MovieTicket[]>('tickets', []);
-  localTickets.forEach(t => addDeletedTicketId(t.id));
-  DEFAULT_MOVIES.forEach(m => addDeletedTicketId(m.id));
+  localTickets.forEach((t) => addDeletedTicketId(t.id));
+  DEFAULT_MOVIES.forEach((m) => addDeletedTicketId(m.id));
 
   if (typeof window !== 'undefined' && window.localStorage) {
     localStorage.setItem('mt_hub_simulations_cleared', 'true');
@@ -275,7 +294,9 @@ export async function clearAllTickets(): Promise<boolean> {
     } catch (e: unknown) {
       const dbErr = DbError.fromError('clearAllTickets', e, true);
       setSupabaseLastError(dbErr.message);
-      logger.warn('Supabase clearAllTickets failed, falling back to LocalStorage', 'tickets', { error: dbErr.message });
+      logger.warn('Supabase clearAllTickets failed, falling back to LocalStorage', 'tickets', {
+        error: dbErr.message,
+      });
     }
   }
 

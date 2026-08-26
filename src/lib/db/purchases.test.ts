@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { 
-  purchaseTicket, 
-  getPurchasesForBuyer, 
-  getPurchasesForProducer, 
+import {
+  purchaseTicket,
+  getPurchasesForBuyer,
+  getPurchasesForProducer,
   authenticateTicket,
-  getGateLogs
+  getGateLogs,
 } from './purchases';
 import { createTicket } from './tickets';
 import { registerUser } from './profiles';

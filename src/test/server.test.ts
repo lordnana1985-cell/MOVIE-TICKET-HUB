@@ -19,13 +19,11 @@ describe('Server API Endpoints & Zod Validation', () => {
   });
 
   it('POST /api/paystack/subaccount validates input with Zod schema and rejects invalid payload', async () => {
-    const res = await request(app)
-      .post('/api/paystack/subaccount')
-      .send({
-        business_name: 'A', // too short
-        settlement_bank: '',
-        account_number: '123'
-      });
+    const res = await request(app).post('/api/paystack/subaccount').send({
+      business_name: 'A', // too short
+      settlement_bank: '',
+      account_number: '123',
+    });
 
     expect(res.status).toBe(400);
     expect(res.body.status).toBe(false);
@@ -33,14 +31,12 @@ describe('Server API Endpoints & Zod Validation', () => {
   });
 
   it('POST /api/paystack/subaccount accepts valid input payload', async () => {
-    const res = await request(app)
-      .post('/api/paystack/subaccount')
-      .send({
-        business_name: 'Apex Cinema Group',
-        settlement_bank: 'MTN',
-        account_number: '0241234567',
-        primary_contact_email: 'apex@cinema.com'
-      });
+    const res = await request(app).post('/api/paystack/subaccount').send({
+      business_name: 'Apex Cinema Group',
+      settlement_bank: 'MTN',
+      account_number: '0241234567',
+      primary_contact_email: 'apex@cinema.com',
+    });
 
     expect(res.status).toBe(200);
     expect(res.body.status).toBe(true);
@@ -48,23 +44,19 @@ describe('Server API Endpoints & Zod Validation', () => {
   });
 
   it('POST /api/paystack/initialize validates email and positive amount', async () => {
-    const invalidRes = await request(app)
-      .post('/api/paystack/initialize')
-      .send({
-        email: 'invalid-email',
-        amount: -10
-      });
+    const invalidRes = await request(app).post('/api/paystack/initialize').send({
+      email: 'invalid-email',
+      amount: -10,
+    });
 
     expect(invalidRes.status).toBe(400);
     expect(invalidRes.body.status).toBe(false);
 
-    const validRes = await request(app)
-      .post('/api/paystack/initialize')
-      .send({
-        email: 'customer@domain.com',
-        amount: 50,
-        callback_url: 'https://movietickethub.app/callback'
-      });
+    const validRes = await request(app).post('/api/paystack/initialize').send({
+      email: 'customer@domain.com',
+      amount: 50,
+      callback_url: 'https://movietickethub.app/callback',
+    });
 
     expect(validRes.status).toBe(200);
     expect(validRes.body.status).toBe(true);
@@ -79,13 +71,11 @@ describe('Server API Endpoints & Zod Validation', () => {
   });
 
   it('POST /api/send-verification-code validates payload', async () => {
-    const res = await request(app)
-      .post('/api/send-verification-code')
-      .send({
-        email: 'user@example.com',
-        code: '582910',
-        purpose: 'account_recovery'
-      });
+    const res = await request(app).post('/api/send-verification-code').send({
+      email: 'user@example.com',
+      code: '582910',
+      purpose: 'account_recovery',
+    });
 
     expect(res.status).toBe(200);
     expect(res.body.status).toBe(true);

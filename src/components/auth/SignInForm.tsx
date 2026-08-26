@@ -110,8 +110,8 @@ export default function SignInForm({
           role === 'admin'
             ? 'bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white font-bold shadow-md shadow-rose-900/30'
             : role === 'producer'
-            ? 'bg-gradient-to-r from-gold-light via-gold to-gold-dark text-black font-bold'
-            : 'bg-sky-deep text-white font-bold'
+              ? 'bg-gradient-to-r from-gold-light via-gold to-gold-dark text-black font-bold'
+              : 'bg-sky-deep text-white font-bold'
         }`}
         id="page-auth-submit-btn"
       >

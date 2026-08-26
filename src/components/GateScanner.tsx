@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { 
-  ScanLine, 
-  Camera, 
-  Search, 
+import {
+  ScanLine,
+  Camera,
+  Search,
   ArrowRight,
   User,
   Film,
@@ -10,7 +10,7 @@ import {
   QrCode,
   RefreshCw,
   Video,
-  AlertTriangle
+  AlertTriangle,
 } from 'lucide-react';
 import { UserProfile, TicketPurchase, GateLog } from '../types';
 import { db } from '../lib/db';
@@ -55,9 +55,10 @@ export default function GateScanner({ user }: GateScannerProps) {
     if (isCapturing) return;
     setIsCapturing(true);
     setScanStatus('Analyzing camera frame for ticket barcodes...');
-    
+
     setTimeout(() => {
-      const pendingTicket = purchasableTickets.find(p => p.status === 'unused') || purchasableTickets[0];
+      const pendingTicket =
+        purchasableTickets.find((p) => p.status === 'unused') || purchasableTickets[0];
       if (pendingTicket) {
         setScanStatus(`Found code: ${pendingTicket.id}! Validating...`);
         setTimeout(async () => {
@@ -80,7 +81,7 @@ export default function GateScanner({ user }: GateScannerProps) {
     try {
       const allPurchases = await db.getPurchasesForProducer(user.id);
       setPurchasableTickets(allPurchases);
-      
+
       const storedLogs = await db.getGateLogs();
       setLogs(storedLogs);
     } catch (e) {
@@ -100,7 +101,7 @@ export default function GateScanner({ user }: GateScannerProps) {
     } catch (e) {
       setScanResult({
         success: false,
-        message: 'An error occurred during gate verification. Please retry.'
+        message: 'An error occurred during gate verification. Please retry.',
       });
     }
   };
@@ -117,10 +118,14 @@ export default function GateScanner({ user }: GateScannerProps) {
           Event Access Control System
         </span>
         <h2 className="font-display text-3xl font-extrabold tracking-tight text-white mt-1">
-          Gate <span className="bg-gradient-to-r from-gold-light via-gold to-gold-dark bg-clip-text text-transparent">Gatekeeper</span>
+          Gate{' '}
+          <span className="bg-gradient-to-r from-gold-light via-gold to-gold-dark bg-clip-text text-transparent">
+            Gatekeeper
+          </span>
         </h2>
         <p className="text-sm text-gray-400 mt-1">
-          Verify and authenticate event tickets at the entrance gate. Double-entry protection secured.
+          Verify and authenticate event tickets at the entrance gate. Double-entry protection
+          secured.
         </p>
       </div>
 
@@ -141,8 +146,8 @@ export default function GateScanner({ user }: GateScannerProps) {
                 type="button"
                 onClick={() => setIsScanningMode(false)}
                 className={`flex-1 rounded-lg py-2.5 text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-                  !isScanningMode 
-                    ? 'bg-gradient-to-r from-gold to-gold-dark text-black shadow' 
+                  !isScanningMode
+                    ? 'bg-gradient-to-r from-gold to-gold-dark text-black shadow'
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
@@ -153,8 +158,8 @@ export default function GateScanner({ user }: GateScannerProps) {
                 type="button"
                 onClick={() => setIsScanningMode(true)}
                 className={`flex-1 rounded-lg py-2.5 text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-                  isScanningMode 
-                    ? 'bg-gradient-to-r from-gold to-gold-dark text-black shadow' 
+                  isScanningMode
+                    ? 'bg-gradient-to-r from-gold to-gold-dark text-black shadow'
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
@@ -218,7 +223,11 @@ export default function GateScanner({ user }: GateScannerProps) {
                       className="bg-transparent border-none text-white text-xs font-mono focus:outline-none flex-1 cursor-pointer"
                     >
                       {videoDevices.map((device, idx) => (
-                        <option key={device.deviceId} value={device.deviceId} className="bg-black text-white">
+                        <option
+                          key={device.deviceId}
+                          value={device.deviceId}
+                          className="bg-black text-white"
+                        >
                           {device.label || `Camera ${idx + 1}`}
                         </option>
                       ))}
@@ -256,9 +265,9 @@ export default function GateScanner({ user }: GateScannerProps) {
                           cameraStream ? 'opacity-90' : 'opacity-0'
                         }`}
                       />
-                      
+
                       {cameraStream && <div className="scanner-laser" />}
-                      
+
                       <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-black/40 backdrop-blur-[2px] pointer-events-none">
                         <div className="w-48 h-48 sm:w-56 sm:h-56 border border-gold/40 rounded-2xl relative flex items-center justify-center shadow-[0_0_50px_rgba(234,179,8,0.15)]">
                           <QrCode className="h-16 w-16 text-gold/30" />
@@ -314,14 +323,18 @@ export default function GateScanner({ user }: GateScannerProps) {
                         <User className="h-2.5 w-2.5" />
                         <span className="truncate">{purchase.buyerName}</span>
                         <span className="text-gray-600">•</span>
-                        <span className="text-gray-500 font-bold">{purchase.id.substring(0, 10)}...</span>
+                        <span className="text-gray-500 font-bold">
+                          {purchase.id.substring(0, 10)}...
+                        </span>
                       </div>
                     </div>
-                    <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase ${
-                      purchase.status === 'unused' 
-                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                        : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                    }`}>
+                    <span
+                      className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase ${
+                        purchase.status === 'unused'
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                          : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                      }`}
+                    >
                       {purchase.status}
                     </span>
                   </button>
@@ -332,10 +345,7 @@ export default function GateScanner({ user }: GateScannerProps) {
 
           {/* SCAN RESULT MODAL */}
           {scanResult && (
-            <ScanResultModal
-              scanResult={scanResult}
-              onClose={() => setScanResult(null)}
-            />
+            <ScanResultModal scanResult={scanResult} onClose={() => setScanResult(null)} />
           )}
         </div>
 

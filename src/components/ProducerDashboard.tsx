@@ -208,7 +208,11 @@ export default function ProducerDashboard({
             onTicketCreated();
           }
         } catch (err: unknown) {
-          logger.error('Auto generation of Paystack subaccount on dashboard mount failed', 'ProducerDashboard', err);
+          logger.error(
+            'Auto generation of Paystack subaccount on dashboard mount failed',
+            'ProducerDashboard',
+            err
+          );
         }
       };
       autoGenerate();
@@ -274,7 +278,8 @@ export default function ProducerDashboard({
             </span>
           </h2>
           <p className="text-sm text-gray-400 mt-1">
-            Manage your event tickets, upload trailers/covers, generate tickets, and view real-time earnings.
+            Manage your event tickets, upload trailers/covers, generate tickets, and view real-time
+            earnings.
           </p>
           {user.phoneNumber && (
             <div className="mt-3 inline-flex items-center gap-2 rounded-xl bg-gold/10 border border-gold/20 px-3.5 py-2 text-xs text-gold font-mono">

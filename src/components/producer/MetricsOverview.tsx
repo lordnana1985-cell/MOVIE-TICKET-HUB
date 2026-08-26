@@ -15,7 +15,10 @@ export default function MetricsOverview({
   totalSalesCount,
 }: MetricsOverviewProps) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="producer-metrics-overview">
+    <div
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+      id="producer-metrics-overview"
+    >
       {/* CARD 1: GROSS SALES */}
       <div className="rounded-2xl glass-panel p-4 md:p-6 border-l-4 border-l-sky-deep shadow-md">
         <div className="flex items-center justify-between">
@@ -51,9 +54,7 @@ export default function MetricsOverview({
           <h3 className="text-xl md:text-2xl font-black font-mono text-gold-light">
             GH₵{producerShare.toLocaleString()}
           </h3>
-          <p className="text-[10px] text-gold/60 mt-1 font-medium">
-            Direct Paystack split payouts
-          </p>
+          <p className="text-[10px] text-gold/60 mt-1 font-medium">Direct Paystack split payouts</p>
         </div>
       </div>
 
@@ -71,9 +72,7 @@ export default function MetricsOverview({
           <h3 className="text-xl md:text-2xl font-black font-mono text-gray-300">
             GH₵{hubShare.toLocaleString()}
           </h3>
-          <p className="text-[10px] text-gray-500 mt-1">
-            Sent to ETH (Event Ticket Hub) platform
-          </p>
+          <p className="text-[10px] text-gray-500 mt-1">Sent to ETH (Event Ticket Hub) platform</p>
         </div>
       </div>
 
@@ -91,9 +90,7 @@ export default function MetricsOverview({
           <h3 className="text-xl md:text-2xl font-black font-mono text-white">
             {totalSalesCount} <span className="text-xs text-gray-500 font-normal">tickets</span>
           </h3>
-          <p className="text-[10px] text-gray-500 mt-1">
-            Live gate validation-ready passes
-          </p>
+          <p className="text-[10px] text-gray-500 mt-1">Live gate validation-ready passes</p>
         </div>
       </div>
     </div>

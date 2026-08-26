@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { registerUser, getUserProfile, updateUserProfile, checkEmailExists, generatePaystackSubaccount } from '../lib/db/profiles';
+import {
+  registerUser,
+  getUserProfile,
+  updateUserProfile,
+  checkEmailExists,
+  generatePaystackSubaccount,
+} from '../lib/db/profiles';
 import { UserProfile } from '../types';
 
 describe('profiles db module', () => {
@@ -15,7 +21,7 @@ describe('profiles db module', () => {
     name: 'Premier Studios',
     companyName: 'Premier Studios Ltd',
     phoneNumber: '+233240000000',
-    paystackSubaccountCode: 'SUB_123456'
+    paystackSubaccountCode: 'SUB_123456',
   };
 
   it('registers and retrieves user profile from storage', async () => {
@@ -34,7 +40,7 @@ describe('profiles db module', () => {
     await registerUser(sampleProfile);
     const updated = await updateUserProfile('user-profile-test', {
       companyName: 'Updated Studios Ltd',
-      phoneNumber: '+233241111111'
+      phoneNumber: '+233241111111',
     });
 
     expect(updated.companyName).toBe('Updated Studios Ltd');

@@ -23,7 +23,7 @@ describe('tickets db module', () => {
     availableQuantity: 50,
     coverUrl: 'https://images.unsplash.com/test',
     createdAt: new Date().toISOString(),
-    category: 'movie'
+    category: 'movie',
   };
 
   it('retrieves default and local tickets', async () => {
@@ -38,7 +38,7 @@ describe('tickets db module', () => {
     expect(created.title).toBe('Test Movie Premiere');
 
     const allTickets = await getTickets();
-    const found = allTickets.find(t => t.id === 'test-ticket-1');
+    const found = allTickets.find((t) => t.id === 'test-ticket-1');
     expect(found).toBeDefined();
     expect(found?.title).toBe('Test Movie Premiere');
   });
@@ -48,7 +48,7 @@ describe('tickets db module', () => {
     await deleteTicket(sampleTicket.id);
 
     const allTickets = await getTickets();
-    const found = allTickets.find(t => t.id === sampleTicket.id);
+    const found = allTickets.find((t) => t.id === sampleTicket.id);
     expect(found).toBeUndefined();
   });
 

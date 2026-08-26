@@ -24,7 +24,7 @@ describe('Database Layer - Core Data Operations & Predictable State', () => {
       availableQuantity: 100,
       coverUrl: 'https://images.unsplash.com/photo-sample',
       createdAt: new Date().toISOString(),
-      category: 'movie'
+      category: 'movie',
     };
 
     it('should create and retrieve a new movie ticket', async () => {
@@ -35,7 +35,7 @@ describe('Database Layer - Core Data Operations & Predictable State', () => {
       expect(created.availableQuantity).toBe(100);
 
       const allTickets = await db.getTickets();
-      const match = allTickets.find(t => t.id === 'ticket-cinema-101');
+      const match = allTickets.find((t) => t.id === 'ticket-cinema-101');
       expect(match).toBeDefined();
       expect(match?.producerName).toBe('Gold Coast Films');
       expect(match?.category).toBe('movie');
@@ -43,15 +43,15 @@ describe('Database Layer - Core Data Operations & Predictable State', () => {
 
     it('should delete a ticket and ensure it is removed from active listings', async () => {
       await db.createTicket(testTicket);
-      
+
       const beforeDelete = await db.getTickets();
-      expect(beforeDelete.some(t => t.id === testTicket.id)).toBe(true);
+      expect(beforeDelete.some((t) => t.id === testTicket.id)).toBe(true);
 
       const deleteResult = await db.deleteTicket(testTicket.id);
       expect(deleteResult).toBe(true);
 
       const afterDelete = await db.getTickets();
-      expect(afterDelete.some(t => t.id === testTicket.id)).toBe(false);
+      expect(afterDelete.some((t) => t.id === testTicket.id)).toBe(false);
     });
 
     it('should clear all tickets and simulations completely', async () => {
@@ -73,7 +73,7 @@ describe('Database Layer - Core Data Operations & Predictable State', () => {
       phoneNumber: '+233241234567',
       settlementBank: 'MTN',
       accountNumber: '0241234567',
-      paystackSubaccountCode: 'SUB_TEST_001'
+      paystackSubaccountCode: 'SUB_TEST_001',
     };
 
     const buyerProfile: Omit<UserProfile, 'balance'> = {
@@ -81,7 +81,7 @@ describe('Database Layer - Core Data Operations & Predictable State', () => {
       email: 'fan@ghanafilm.com',
       role: 'buyer',
       name: 'Ama Serwaa',
-      phoneNumber: '+233209876543'
+      phoneNumber: '+233209876543',
     };
 
     it('should register a new account with a zero starting balance', async () => {
@@ -142,7 +142,7 @@ describe('Database Layer - Core Data Operations & Predictable State', () => {
       email: 'finance@ghanafilm.com',
       role: 'producer',
       name: 'Kwame Finance',
-      companyName: 'Ghana Film Guild'
+      companyName: 'Ghana Film Guild',
     };
 
     it('should update and persist user balance incrementally and reliably', async () => {
@@ -154,7 +154,7 @@ describe('Database Layer - Core Data Operations & Predictable State', () => {
 
       // Simulate revenue addition from ticket sales (e.g. 5 tickets @ 50 GHS = 250 GHS)
       const updated = await db.updateUserProfile('producer-fin-01', {
-        balance: 250
+        balance: 250,
       });
       expect(updated?.balance).toBe(250);
 
@@ -164,7 +164,7 @@ describe('Database Layer - Core Data Operations & Predictable State', () => {
 
       // Simulate payout withdrawal of 100 GHS leaving 150 GHS balance
       const afterWithdrawal = await db.updateUserProfile('producer-fin-01', {
-        balance: 150
+        balance: 150,
       });
       expect(afterWithdrawal?.balance).toBe(150);
 
@@ -180,7 +180,7 @@ describe('Database Layer - Core Data Operations & Predictable State', () => {
         id: prodId,
         email: 'temp.producer@studios.com',
         role: 'producer',
-        name: 'Temp Producer'
+        name: 'Temp Producer',
       });
 
       const ticket1: MovieTicket = {
@@ -198,14 +198,14 @@ describe('Database Layer - Core Data Operations & Predictable State', () => {
         totalQuantity: 20,
         availableQuantity: 20,
         createdAt: new Date().toISOString(),
-        category: 'movie'
+        category: 'movie',
       };
 
       await db.createTicket(ticket1);
 
       // Verify ticket exists
       const ticketsBefore = await db.getTickets();
-      expect(ticketsBefore.some(t => t.id === 't-temp-1')).toBe(true);
+      expect(ticketsBefore.some((t) => t.id === 't-temp-1')).toBe(true);
 
       // Delete the producer profile
       const deleted = await db.deleteProfile(prodId);
@@ -217,7 +217,7 @@ describe('Database Layer - Core Data Operations & Predictable State', () => {
 
       // Verify producer tickets were purged
       const ticketsAfter = await db.getTickets();
-      expect(ticketsAfter.some(t => t.id === 't-temp-1')).toBe(false);
+      expect(ticketsAfter.some((t) => t.id === 't-temp-1')).toBe(false);
     });
   });
 });

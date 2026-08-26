@@ -43,7 +43,7 @@ export interface TicketPurchase {
   buyerEmail: string;
   amountPaid: number;
   producerEarning: number; // 80%
-  hubEarning: number;      // 20%
+  hubEarning: number; // 20%
   paystackRef: string;
   purchasedAt: string;
   status: 'unused' | 'used';
@@ -64,4 +64,3 @@ export interface CartItem {
   ticket: MovieTicket;
   quantity: number;
 }
-

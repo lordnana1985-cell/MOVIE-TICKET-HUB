@@ -17,13 +17,7 @@ describe('TicketForm Component Unit Tests', () => {
     const handleClose = vi.fn();
     const handleSuccess = vi.fn();
 
-    render(
-      <TicketForm 
-        user={mockProducer} 
-        onClose={handleClose} 
-        onSuccess={handleSuccess} 
-      />
-    );
+    render(<TicketForm user={mockProducer} onClose={handleClose} onSuccess={handleSuccess} />);
 
     expect(screen.getByText(/Generate Event Ticket/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/Enter event title\.\.\./i)).toBeInTheDocument();
@@ -34,13 +28,7 @@ describe('TicketForm Component Unit Tests', () => {
     const handleClose = vi.fn();
     const handleSuccess = vi.fn();
 
-    render(
-      <TicketForm 
-        user={mockProducer} 
-        onClose={handleClose} 
-        onSuccess={handleSuccess} 
-      />
-    );
+    render(<TicketForm user={mockProducer} onClose={handleClose} onSuccess={handleSuccess} />);
 
     const titleInput = screen.getByPlaceholderText(/Enter event title\.\.\./i);
     fireEvent.change(titleInput, { target: { value: 'Accra Afrobeats Gala' } });
