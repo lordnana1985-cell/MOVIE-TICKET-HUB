@@ -65,7 +65,7 @@ describe('SubaccountSetup Component', () => {
     fireEvent.change(nameInput, { target: { value: 'New Cinema Studio' } });
     expect(defaultProps.setSetupBusinessName).toHaveBeenCalledWith('New Cinema Studio');
 
-    const accInput = screen.getByPlaceholderText(/e\.g\. 0123456789/i);
+    const accInput = screen.getByPlaceholderText(/e\.g\. 0244123456/i);
     fireEvent.change(accInput, { target: { value: '9876543210' } });
     expect(defaultProps.setSetupAccountNumber).toHaveBeenCalledWith('9876543210');
 
@@ -81,7 +81,7 @@ describe('SubaccountSetup Component', () => {
         {...defaultProps}
         isEditingSubaccount={true}
         showVerificationInput={true}
-        userEnteredCode="12"
+        userEnteredCode="1234"
       />
     );
     expect(screen.getByText(/Secure Account Verification/i)).toBeInTheDocument();

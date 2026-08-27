@@ -3,11 +3,11 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
 import CheckoutFlow from './CheckoutFlow';
 import { UserProfile, MovieTicket } from '../../types';
-import { db } from '../../lib/db';
 
 vi.mock('../../lib/db', () => ({
   db: {
     purchaseTicket: vi.fn().mockResolvedValue({}),
+    getUserProfile: vi.fn().mockResolvedValue(null),
   },
 }));
 
@@ -62,14 +62,33 @@ describe('CheckoutFlow Component', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('handles simulated payment confirmation successfully', async () => {
+  it('handles payment initialization flow when Proceed to Pay is clicked', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: {
+        get: (key: string) => (key === 'content-type' ? 'application/json' : null),
+      },
+      json: async () => ({
+        status: true,
+        data: {
+          authorization_url: 'https://checkout.paystack.com/test-ref',
+          reference: 'pstk_test_123',
+        },
+      }),
+    } as any);
+
     render(<CheckoutFlow {...defaultProps} />);
-    const payBtn = screen.getByRole('button', { name: /Complete Simulated Payment/i });
+    const payBtn = screen.getByRole('button', { name: /Proceed to Pay/i });
     expect(payBtn).toBeInTheDocument();
     fireEvent.click(payBtn);
 
     await waitFor(() => {
-      expect(db.purchaseTicket).toHaveBeenCalled();
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/paystack/initialize',
+        expect.objectContaining({
+          method: 'POST',
+        })
+      );
     });
   });
 });

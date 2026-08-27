@@ -4,6 +4,7 @@ import {
   Camera,
   Search,
   ArrowRight,
+  ArrowLeft,
   User,
   Film,
   KeyRound,
@@ -21,9 +22,10 @@ import ScanResultModal from './scanner/ScanResultModal';
 
 interface GateScannerProps {
   user: UserProfile;
+  onBack?: () => void;
 }
 
-export default function GateScanner({ user }: GateScannerProps) {
+export default function GateScanner({ user, onBack }: GateScannerProps) {
   const [ticketCode, setTicketCode] = useState('');
   const [logs, setLogs] = useState<GateLog[]>([]);
   const [isScanningMode, setIsScanningMode] = useState(false);
@@ -113,20 +115,32 @@ export default function GateScanner({ user }: GateScannerProps) {
   return (
     <div className="space-y-8 animate-fadeIn" id="gate-scanner-container">
       {/* HEADER */}
-      <div>
-        <span className="text-xs font-mono tracking-widest text-sky-light font-semibold uppercase">
-          Event Access Control System
-        </span>
-        <h2 className="font-display text-3xl font-extrabold tracking-tight text-white mt-1">
-          Gate{' '}
-          <span className="bg-gradient-to-r from-gold-light via-gold to-gold-dark bg-clip-text text-transparent">
-            Gatekeeper
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <span className="text-xs font-mono tracking-widest text-sky-light font-semibold uppercase">
+            Event Access Control System
           </span>
-        </h2>
-        <p className="text-sm text-gray-400 mt-1">
-          Verify and authenticate event tickets at the entrance gate. Double-entry protection
-          secured.
-        </p>
+          <h2 className="font-display text-3xl font-extrabold tracking-tight text-white mt-1">
+            Gate{' '}
+            <span className="bg-gradient-to-r from-gold-light via-gold to-gold-dark bg-clip-text text-transparent">
+              Gatekeeper
+            </span>
+          </h2>
+          <p className="text-sm text-gray-400 mt-1">
+            Verify and authenticate event tickets at the entrance gate. Double-entry protection
+            secured.
+          </p>
+        </div>
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="self-start sm:self-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-gold/30 hover:text-gold transition-all"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

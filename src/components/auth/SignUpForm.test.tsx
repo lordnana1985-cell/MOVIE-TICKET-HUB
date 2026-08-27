@@ -67,8 +67,12 @@ describe('SignUpForm Component', () => {
     fireEvent.change(passInput, { target: { value: 'SecretPassword123' } });
     expect(defaultProps.setPassword).toHaveBeenCalledWith('SecretPassword123');
 
-    const submitBtn = screen.getByRole('button', { name: /Register Account/i });
-    fireEvent.click(submitBtn);
+    const toggleBtn = screen.getByLabelText(/Show password/i);
+    fireEvent.click(toggleBtn);
+    expect(defaultProps.setShowPassword).toHaveBeenCalledWith(true);
+
+    const form = screen.getByRole('button', { name: /Register Account/i }).closest('form');
+    fireEvent.submit(form!);
     expect(defaultProps.onSubmit).toHaveBeenCalled();
   });
 });

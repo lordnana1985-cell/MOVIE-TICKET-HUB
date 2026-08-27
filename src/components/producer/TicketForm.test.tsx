@@ -9,6 +9,8 @@ vi.mock('../../lib/db', () => ({
   db: {
     createTicket: vi.fn().mockResolvedValue({ id: 'new-ticket-1' }),
   },
+  getSupabaseLastError: vi.fn(() => null),
+  clearSupabaseLastError: vi.fn(),
 }));
 
 describe('TicketForm Component Unit Tests', () => {
@@ -62,6 +64,11 @@ describe('TicketForm Component Unit Tests', () => {
     const descInput = screen.getByPlaceholderText(/Provide a compelling description/i);
     fireEvent.change(descInput, {
       target: { value: 'Exclusive premiere with special guest stars' },
+    });
+
+    const venueInput = screen.getByPlaceholderText(/e\.g\. Silverbird Cinemas/i);
+    fireEvent.change(venueInput, {
+      target: { value: 'Accra Mall Silverbird' },
     });
 
     const submitBtn = screen.getByRole('button', { name: /Generate Premier Ticket/i });

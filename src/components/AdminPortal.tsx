@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ShieldAlert, Activity, RefreshCw } from 'lucide-react';
 import { db } from '../lib/db';
 import { logger } from '../lib/logger';
@@ -9,21 +9,40 @@ import AdminUserTable from './admin/AdminUserTable';
 import AdminModals from './admin/AdminModals';
 
 interface AdminPortalProps {
-  user: UserProfile;
-  tickets: MovieTicket[];
-  onDataChanged: () => void;
+  user?: UserProfile;
+  adminUser?: UserProfile;
+  tickets?: MovieTicket[];
+  onDataChanged?: () => void;
+  onActionNotice?: (msg: string, type?: 'success' | 'error') => void;
 }
 
 export default function AdminPortal({
   user,
-  tickets: initialTickets,
-  onDataChanged,
+  adminUser,
+  tickets: initialTickets = [],
+  onDataChanged = () => {},
+  onActionNotice,
 }: AdminPortalProps) {
+  const currentUser = user || adminUser;
   const [tickets, setTickets] = useState<MovieTicket[]>(initialTickets);
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  const reportNotice = useCallback(
+    (msg: string, type: 'success' | 'error') => {
+      if (type === 'success') {
+        setSuccess(msg);
+      } else {
+        setError(msg);
+      }
+      if (onActionNotice) {
+        onActionNotice(msg, type);
+      }
+    },
+    [onActionNotice]
+  );
 
   // Search and Filter states
   const [ticketSearch, setTicketSearch] = useState('');
@@ -37,11 +56,7 @@ export default function AdminPortal({
   const [profileToDelete, setProfileToDelete] = useState<UserProfile | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
-  useEffect(() => {
-    loadAdminData();
-  }, []);
-
-  const loadAdminData = async () => {
+  const loadAdminData = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -52,11 +67,18 @@ export default function AdminPortal({
       setTickets(allTickets);
     } catch (err: any) {
       logger.error('Failed to load admin data:', 'AdminPortal', { error: err?.message || err });
-      setError('Failed to fetch admin dashboard records. Please check database connection.');
+      reportNotice(
+        'Failed to fetch admin dashboard records. Please check database connection.',
+        'error'
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }, [reportNotice]);
+
+  useEffect(() => {
+    loadAdminData();
+  }, [loadAdminData]);
 
   const handleDeleteTicketConfirm = async () => {
     if (!ticketToDelete) return;
@@ -69,14 +91,14 @@ export default function AdminPortal({
       setTickets((prev) => prev.filter((t) => t.id !== deletedId));
       const result = await db.deleteTicket(deletedId);
       if (result) {
-        setSuccess(`Event ticket "${deletedTitle}" has been deleted from the market.`);
+        reportNotice(`Event ticket "${deletedTitle}" has been deleted from the market.`, 'success');
         setTicketToDelete(null);
         onDataChanged();
       } else {
         throw new Error('Ticket deletion failed.');
       }
     } catch (err: any) {
-      setError(err?.message || 'Failed to delete ticket.');
+      reportNotice(err?.message || 'Failed to delete ticket.', 'error');
       await loadAdminData();
     } finally {
       setActionLoading(false);
@@ -97,8 +119,9 @@ export default function AdminPortal({
 
       const result = await db.deleteProfile(targetProfile.id);
       if (result) {
-        setSuccess(
-          `Account for "${targetProfile.name}" (${targetProfile.role}) was successfully deleted.`
+        reportNotice(
+          `Account for "${targetProfile.name}" (${targetProfile.role}) was successfully deleted.`,
+          'success'
         );
         setProfileToDelete(null);
         onDataChanged();
@@ -106,7 +129,7 @@ export default function AdminPortal({
         throw new Error('Account deletion failed.');
       }
     } catch (err: any) {
-      setError(err?.message || 'Failed to remove account.');
+      reportNotice(err?.message || 'Failed to remove account.', 'error');
       await loadAdminData();
     } finally {
       setActionLoading(false);
@@ -158,6 +181,12 @@ export default function AdminPortal({
           <p className="text-xs text-gray-400 mt-1">
             Oversee tickets, terminate rogue assets, and delete producer or buyer accounts from the
             core database.
+            {currentUser && (
+              <span className="block mt-1 text-[11px] font-mono text-gray-500">
+                Supervisor:{' '}
+                <span className="text-gray-300">{currentUser.name || currentUser.email}</span>
+              </span>
+            )}
           </p>
         </div>
         <button

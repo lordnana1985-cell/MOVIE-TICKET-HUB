@@ -123,18 +123,18 @@ export default function TicketForm({ user, onClose, onSuccess }: TicketFormProps
         setError(
           `Notice: Ticket created in Local Browser Storage, but failed to sync to Supabase Database (Error: "${dbErr}").`
         );
+        onSuccess();
         setTimeout(() => {
           setError('');
-          onSuccess();
           onClose();
-        }, 6000);
+        }, 4000);
       } else {
         setSuccess('Event Ticket Generated successfully!');
+        onSuccess();
         setTimeout(() => {
           setSuccess('');
-          onSuccess();
           onClose();
-        }, 2000);
+        }, 1500);
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);

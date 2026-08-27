@@ -276,8 +276,8 @@ app.post('/api/send-verification-code', async (req: Request, res: Response) => {
 });
 
 // VITE DEV MIDDLEWARE / STATIC FILES FALLBACK
-async function setupFrontend() {
-  if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+async function startServer() {
+  if (process.env.NODE_ENV !== 'production') {
     try {
       const viteMod = 'vite';
       const { createServer: createViteServer } = await import(viteMod);
@@ -286,23 +286,26 @@ async function setupFrontend() {
         appType: 'spa',
       });
       app.use(vite.middlewares);
-    } catch {
-      // Fallback
+    } catch (err) {
+      console.error('Failed to initialize Vite dev middleware:', err);
     }
-  } else if (!process.env.VERCEL) {
+  } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (_req: Request, res: Response) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
+
+  if (process.env.NODE_ENV !== 'test') {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  }
 }
 
-if (!process.env.VERCEL && !process.env.VITEST && process.env.NODE_ENV !== 'test') {
-  setupFrontend();
-  app.listen(PORT, '0.0.0.0', () => {
-    // Dev server listening
-  });
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
 }
 
 export default app;

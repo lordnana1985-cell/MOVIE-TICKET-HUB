@@ -11,11 +11,22 @@ import AuthHeroBanner from './auth/AuthHeroBanner';
 
 interface AuthPageProps {
   initialRole: UserRole;
-  onAuthSuccess: (user: UserProfile) => void;
+  onAuthSuccess?: (user: UserProfile) => void;
+  onSuccess?: (user: UserProfile) => void;
   onCancel?: () => void;
+  onBackToMarket?: () => void;
 }
 
-export default function AuthPage({ initialRole, onAuthSuccess, onCancel }: AuthPageProps) {
+export default function AuthPage({
+  initialRole,
+  onAuthSuccess,
+  onSuccess,
+  onCancel,
+  onBackToMarket,
+}: AuthPageProps) {
+  const handleAuthComplete = onAuthSuccess || onSuccess || (() => {});
+  const handleCancelAction = onCancel || onBackToMarket;
+
   const [showAdminTab, setShowAdminTab] = useState(() => {
     try {
       const urlParams = new URLSearchParams(window.location.search);
@@ -77,7 +88,7 @@ export default function AuthPage({ initialRole, onAuthSuccess, onCancel }: AuthP
     handleSubmit,
   } = useAuthForm({
     initialRole,
-    onAuthSuccess,
+    onAuthSuccess: handleAuthComplete,
     selectedBankCode,
   });
 
@@ -117,14 +128,14 @@ export default function AuthPage({ initialRole, onAuthSuccess, onCancel }: AuthP
 
       <div className="flex flex-col lg:flex-row min-h-[600px]">
         {/* Left Column Marketing / Brand Banner */}
-        <AuthHeroBanner onCancel={onCancel} />
+        <AuthHeroBanner onCancel={handleCancelAction} />
 
         {/* Right Column Auth Forms */}
         <div className="flex-1 p-6 md:p-12 flex flex-col justify-center relative">
-          {onCancel && (
+          {handleCancelAction && (
             <div className="lg:hidden mb-6">
               <button
-                onClick={onCancel}
+                onClick={handleCancelAction}
                 className="inline-flex items-center gap-1.5 text-[10px] font-semibold tracking-wider text-gray-400 hover:text-white transition-colors uppercase font-mono cursor-pointer"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />

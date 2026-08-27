@@ -14,17 +14,23 @@ import ClearAllModal from './producer/ClearAllModal';
 
 interface ProducerDashboardProps {
   user: UserProfile;
-  onTicketCreated: () => void;
-  setActiveTab: (tab: 'marketplace' | 'producer_dashboard' | 'gate_auth') => void;
+  tickets?: MovieTicket[];
+  purchases?: TicketPurchase[];
+  onTicketCreated?: () => void;
+  setActiveTab?: (tab: 'marketplace' | 'producer_dashboard' | 'gate_auth') => void;
+  onOpenGateScanner?: () => void;
 }
 
 export default function ProducerDashboard({
   user,
-  onTicketCreated,
+  tickets: initialTickets,
+  purchases: initialPurchases,
+  onTicketCreated = () => {},
   setActiveTab,
+  onOpenGateScanner,
 }: ProducerDashboardProps) {
-  const [tickets, setTickets] = useState<MovieTicket[]>([]);
-  const [purchases, setPurchases] = useState<TicketPurchase[]>([]);
+  const [tickets, setTickets] = useState<MovieTicket[]>(initialTickets || []);
+  const [purchases, setPurchases] = useState<TicketPurchase[]>(initialPurchases || []);
   const [isCreating, setIsCreating] = useState(false);
   const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
@@ -293,7 +299,13 @@ export default function ProducerDashboard({
 
         <div className="flex flex-wrap gap-2">
           <button
-            onClick={() => setActiveTab('gate_auth')}
+            onClick={() => {
+              if (onOpenGateScanner) {
+                onOpenGateScanner();
+              } else if (setActiveTab) {
+                setActiveTab('gate_auth');
+              }
+            }}
             className="rounded-xl glass-panel px-4 py-3 text-sm font-semibold text-white hover:bg-white/10 transition-all border border-white/15 shadow-md flex items-center gap-2 cursor-pointer"
             id="gate-verifier-nav-btn"
           >
