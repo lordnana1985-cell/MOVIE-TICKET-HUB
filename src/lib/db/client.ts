@@ -5,22 +5,25 @@ import { logger } from '../logger';
 import { SupabaseError } from '../errors';
 
 const env = (import.meta as any).env || {};
-export const SUPABASE_URL = env.VITE_SUPABASE_URL;
-export const SUPABASE_ANON_KEY = env.VITE_SUPABASE_ANON_KEY;
+export const SUPABASE_URL: string = env.VITE_SUPABASE_URL || '';
+export const SUPABASE_ANON_KEY: string = env.VITE_SUPABASE_ANON_KEY || '';
 
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  throw new Error(
-    'Missing Supabase configuration. Please ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables are configured.'
-  );
-}
+export const isSupabaseConfigured: boolean = Boolean(
+  SUPABASE_URL &&
+    SUPABASE_ANON_KEY &&
+    (SUPABASE_URL.startsWith('http://') || SUPABASE_URL.startsWith('https://')) &&
+    !SUPABASE_URL.includes('your-project') &&
+    !SUPABASE_URL.includes('placeholder')
+);
 
-export const supabase: SupabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    persistSession: typeof window !== 'undefined',
-    autoRefreshToken: false,
-  },
-});
-export const isSupabaseConfigured = true;
+export const supabase: SupabaseClient | null = isSupabaseConfigured
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: typeof window !== 'undefined',
+        autoRefreshToken: false,
+      },
+    })
+  : null;
 let lastSupabaseError: string | null = null;
 
 export const getSupabaseLastError = () => lastSupabaseError;

@@ -1,6 +1,9 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 
+process.env.IS_TEST_ENV = 'true';
+process.env.NODE_ENV = 'test';
+
 // Cleanly mock Supabase client in tests so DB functions gracefully fallback to local storage
 const createMockQueryBuilder = () => {
   const builder: any = {

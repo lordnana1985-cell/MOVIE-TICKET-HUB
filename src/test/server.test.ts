@@ -1,8 +1,19 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
 import app from '../../server';
 
 describe('Server API Endpoints & Zod Validation', () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    process.env = { ...originalEnv };
+    delete process.env.PAYSTACK_SECRET_KEY;
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
   it('GET /api/health returns ok status and uptime', async () => {
     const res = await request(app).get('/api/health');
     expect(res.status).toBe(200);

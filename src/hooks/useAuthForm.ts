@@ -1,6 +1,6 @@
 import { useState, useEffect, FormEvent, useCallback } from 'react';
 import { UserProfile, UserRole } from '../types';
-import { db, supabase } from '../lib/db';
+import { db, supabase, isSupabaseConfigured } from '../lib/db';
 import { logger } from '../lib/logger';
 
 interface UseAuthFormOptions {
@@ -113,21 +113,26 @@ export function useAuthForm({ initialRole, onAuthSuccess, selectedBankCode }: Us
         return;
       }
 
-      try {
-        const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-          email.trim().toLowerCase(),
-          {
-            redirectTo: `${window.location.origin}${window.location.pathname}`,
-          }
-        );
-        if (resetError) throw resetError;
-        setSuccess('A secure password reset link has been dispatched to your email inbox!');
-        setLoading(false);
-      } catch (err: any) {
-        logger.warn('Password reset request error', 'AuthPage', {
-          error: err?.message || err,
-        });
-        setError(err.message || 'Could not send password reset link.');
+      if (isSupabaseConfigured && supabase) {
+        try {
+          const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+            email.trim().toLowerCase(),
+            {
+              redirectTo: `${window.location.origin}${window.location.pathname}`,
+            }
+          );
+          if (resetError) throw resetError;
+          setSuccess('A secure password reset link has been dispatched to your email inbox!');
+          setLoading(false);
+        } catch (err: any) {
+          logger.warn('Password reset request error', 'AuthPage', {
+            error: err?.message || err,
+          });
+          setError(err.message || 'Could not send password reset link.');
+          setLoading(false);
+        }
+      } else {
+        setSuccess('Password reset link sent (Simulation mode: check your email).');
         setLoading(false);
       }
     },
@@ -210,19 +215,21 @@ export function useAuthForm({ initialRole, onAuthSuccess, selectedBankCode }: Us
           }
 
           let userAuth = null;
-          try {
-            const { data, error: signUpError } = await supabase.auth.signUp({
-              email,
-              password,
-              options: {
-                emailRedirectTo: `${window.location.origin}${window.location.pathname}`,
-              },
-            });
-            if (!signUpError) userAuth = data?.user;
-          } catch (signUpExc: any) {
-            logger.warn('Supabase signUp note', 'AuthPage', {
-              error: signUpExc?.message || signUpExc,
-            });
+          if (isSupabaseConfigured && supabase) {
+            try {
+              const { data, error: signUpError } = await supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                  emailRedirectTo: `${window.location.origin}${window.location.pathname}`,
+                },
+              });
+              if (!signUpError) userAuth = data?.user;
+            } catch (signUpExc: any) {
+              logger.warn('Supabase signUp note', 'AuthPage', {
+                error: signUpExc?.message || signUpExc,
+              });
+            }
           }
 
           const userId = userAuth?.id || `u-${Math.random().toString(36).substring(2, 11)}`;
@@ -250,26 +257,28 @@ export function useAuthForm({ initialRole, onAuthSuccess, selectedBankCode }: Us
           }, 1500);
         } else {
           let authUser = null;
-          try {
-            const { data, error: signInError } = await supabase.auth.signInWithPassword({
-              email,
-              password,
-            });
-            if (signInError) {
-              const users = JSON.parse(localStorage.getItem('mt_hub_users') || '[]');
-              const foundLocally = users.find(
-                (u: any) => u.email.toLowerCase() === email.trim().toLowerCase()
-              );
-              if (!foundLocally || (foundLocally.password && foundLocally.password !== password)) {
-                setError(signInError.message);
-                setLoading(false);
-                return;
+          if (isSupabaseConfigured && supabase) {
+            try {
+              const { data, error: signInError } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+              });
+              if (signInError) {
+                const users = JSON.parse(localStorage.getItem('mt_hub_users') || '[]');
+                const foundLocally = users.find(
+                  (u: any) => u.email.toLowerCase() === email.trim().toLowerCase()
+                );
+                if (!foundLocally || (foundLocally.password && foundLocally.password !== password)) {
+                  setError(signInError.message);
+                  setLoading(false);
+                  return;
+                }
+              } else {
+                authUser = data?.user;
               }
-            } else {
-              authUser = data?.user;
+            } catch {
+              // fallback
             }
-          } catch {
-            // fallback
           }
 
           let profile = await db.loginUser(email, role);

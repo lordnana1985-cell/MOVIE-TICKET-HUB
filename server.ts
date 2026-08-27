@@ -22,7 +22,16 @@ export function getPaystackSecretKey(): string | undefined {
   const rawKey = process.env.PAYSTACK_SECRET_KEY;
   if (!rawKey) return undefined;
   // Clean surrounding quotes and trailing/leading whitespace
-  return rawKey.trim().replace(/^["']|["']$/g, '');
+  const cleaned = rawKey.trim().replace(/^["']|["']$/g, '');
+  if (
+    cleaned.length === 0 ||
+    cleaned.includes('placeholder') ||
+    cleaned.includes('your_') ||
+    cleaned.includes('your-')
+  ) {
+    return undefined;
+  }
+  return cleaned;
 }
 
 // Robust Paystack fetch wrapper to prevent crashes and handle errors gracefully
@@ -277,34 +286,38 @@ app.post('/api/send-verification-code', async (req: Request, res: Response) => {
 
 // VITE DEV MIDDLEWARE / STATIC FILES FALLBACK
 async function startServer() {
-  if (process.env.NODE_ENV !== 'production') {
-    try {
-      const viteMod = 'vite';
-      const { createServer: createViteServer } = await import(viteMod);
+  try {
+    if (process.env.NODE_ENV !== 'production') {
+      const { createServer: createViteServer } = await import('vite');
       const vite = await createViteServer({
         server: { middlewareMode: true },
         appType: 'spa',
       });
       app.use(vite.middlewares);
-    } catch (err) {
-      console.error('Failed to initialize Vite dev middleware:', err);
+    } else {
+      const distPath = path.join(process.cwd(), 'dist');
+      app.use(express.static(distPath));
+      app.get('*', (_req: Request, res: Response) => {
+        res.sendFile(path.join(distPath, 'index.html'));
+      });
     }
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (_req: Request, res: Response) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
-  }
 
-  if (process.env.NODE_ENV !== 'test') {
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server running on http://localhost:${PORT}`);
-    });
+    const isTest = process.env.IS_TEST_ENV === 'true' || process.env.NODE_ENV === 'test';
+    if (!isTest) {
+      const server = app.listen(PORT, '0.0.0.0', () => {
+        console.log(`Server running on http://localhost:${PORT}`);
+      });
+      server.on('error', (err) => {
+        console.error('Express listen error:', err);
+      });
+    }
+  } catch (err) {
+    console.error('Error in startServer:', err);
   }
 }
 
-if (process.env.NODE_ENV !== 'test') {
+const isTest = process.env.IS_TEST_ENV === 'true' || process.env.NODE_ENV === 'test';
+if (!isTest) {
   startServer();
 }
 
