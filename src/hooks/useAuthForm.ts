@@ -268,7 +268,10 @@ export function useAuthForm({ initialRole, onAuthSuccess, selectedBankCode }: Us
                 const foundLocally = users.find(
                   (u: any) => u.email.toLowerCase() === email.trim().toLowerCase()
                 );
-                if (!foundLocally || (foundLocally.password && foundLocally.password !== password)) {
+                if (
+                  !foundLocally ||
+                  (foundLocally.password && foundLocally.password !== password)
+                ) {
                   setError(signInError.message);
                   setLoading(false);
                   return;

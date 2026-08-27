@@ -95,4 +95,133 @@ describe('useAuthForm Hook Unit Tests', () => {
     expect(result.current.success).toBe('Verification email sent!');
     expect(result.current.resendCooldown).toBe(60);
   });
+
+  it('toggles registration mode and updates fields', () => {
+    const { result } = renderHook(() =>
+      useAuthForm({
+        initialRole: 'buyer',
+        onAuthSuccess: mockOnAuthSuccess,
+      })
+    );
+
+    act(() => {
+      result.current.setIsRegister(true);
+      result.current.setName('Test User');
+      result.current.setPassword('password123');
+      result.current.setConfirmPassword('password123');
+      result.current.setPhoneNumber('0241234567');
+      result.current.setEmail('test@example.com');
+    });
+
+    expect(result.current.isRegister).toBe(true);
+    expect(result.current.name).toBe('Test User');
+    expect(result.current.phoneNumber).toBe('0241234567');
+  });
+
+  it('validates required name on registration', async () => {
+    const { result } = renderHook(() =>
+      useAuthForm({
+        initialRole: 'buyer',
+        onAuthSuccess: mockOnAuthSuccess,
+      })
+    );
+
+    act(() => {
+      result.current.setIsRegister(true);
+      result.current.setEmail('test@example.com');
+      result.current.setPassword('password123');
+      result.current.setName('');
+    });
+
+    const dummyEvent = { preventDefault: vi.fn() } as any;
+    await act(async () => {
+      await result.current.handleSubmit(dummyEvent);
+    });
+
+    expect(result.current.error).toBe('Full name is required.');
+  });
+
+  it('completes registration flow successfully', async () => {
+    const mockCreatedUser = {
+      id: 'usr-new-1',
+      email: 'newuser@example.com',
+      name: 'New User',
+      role: 'buyer',
+      balance: 0,
+    };
+    (db.checkEmailExists as any).mockResolvedValueOnce(false);
+    (db.registerUser as any).mockResolvedValueOnce(mockCreatedUser);
+
+    const { result } = renderHook(() =>
+      useAuthForm({
+        initialRole: 'buyer',
+        onAuthSuccess: mockOnAuthSuccess,
+      })
+    );
+
+    act(() => {
+      result.current.setIsRegister(true);
+      result.current.setEmail('newuser@example.com');
+      result.current.setName('New User');
+      result.current.setPassword('SecurePass123!');
+      result.current.setConfirmPassword('SecurePass123!');
+    });
+
+    const dummyEvent = { preventDefault: vi.fn() } as any;
+    await act(async () => {
+      await result.current.handleSubmit(dummyEvent);
+    });
+
+    expect(result.current.success).toContain('Registration successful');
+  });
+
+  it('completes login flow successfully', async () => {
+    const mockLoggedUser = {
+      id: 'usr-logged-1',
+      email: 'buyer@example.com',
+      name: 'Logged Buyer',
+      role: 'buyer',
+      balance: 0,
+    };
+    (db.loginUser as any).mockResolvedValueOnce(mockLoggedUser);
+
+    const { result } = renderHook(() =>
+      useAuthForm({
+        initialRole: 'buyer',
+        onAuthSuccess: mockOnAuthSuccess,
+      })
+    );
+
+    act(() => {
+      result.current.setEmail('buyer@example.com');
+      result.current.setPassword('SecurePass123!');
+    });
+
+    const dummyEvent = { preventDefault: vi.fn() } as any;
+    await act(async () => {
+      await result.current.handleSubmit(dummyEvent);
+    });
+
+    expect(mockOnAuthSuccess).toHaveBeenCalled();
+  });
+
+  it('handles password recovery request in simulation mode', async () => {
+    const { result } = renderHook(() =>
+      useAuthForm({
+        initialRole: 'buyer',
+        onAuthSuccess: mockOnAuthSuccess,
+      })
+    );
+
+    act(() => {
+      result.current.setEmail('forgot@example.com');
+    });
+
+    const dummyEvent = { preventDefault: vi.fn() } as any;
+    await act(async () => {
+      await result.current.handleForgotPasswordSubmit(dummyEvent);
+    });
+
+    expect(result.current.success).toContain('Password reset');
+  });
 });

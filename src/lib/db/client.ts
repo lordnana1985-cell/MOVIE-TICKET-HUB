@@ -10,10 +10,10 @@ export const SUPABASE_ANON_KEY: string = env.VITE_SUPABASE_ANON_KEY || '';
 
 export const isSupabaseConfigured: boolean = Boolean(
   SUPABASE_URL &&
-    SUPABASE_ANON_KEY &&
-    (SUPABASE_URL.startsWith('http://') || SUPABASE_URL.startsWith('https://')) &&
-    !SUPABASE_URL.includes('your-project') &&
-    !SUPABASE_URL.includes('placeholder')
+  SUPABASE_ANON_KEY &&
+  (SUPABASE_URL.startsWith('http://') || SUPABASE_URL.startsWith('https://')) &&
+  !SUPABASE_URL.includes('your-project') &&
+  !SUPABASE_URL.includes('placeholder')
 );
 
 export const supabase: SupabaseClient | null = isSupabaseConfigured
