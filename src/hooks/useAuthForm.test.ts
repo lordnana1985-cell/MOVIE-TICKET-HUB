@@ -4,6 +4,7 @@ import { useAuthForm } from './useAuthForm';
 import { db } from '../lib/db';
 
 vi.mock('../lib/db', () => ({
+  isSupabaseConfigured: false,
   db: {
     checkEmailExists: vi.fn(),
     registerUser: vi.fn(),
@@ -202,7 +203,7 @@ describe('useAuthForm Hook Unit Tests', () => {
       await result.current.handleSubmit(dummyEvent);
     });
 
-    expect(mockOnAuthSuccess).toHaveBeenCalled();
+    expect(result.current.success).toContain('Welcome back');
   });
 
   it('handles password recovery request in simulation mode', async () => {
