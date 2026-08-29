@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useAuthForm } from './useAuthForm';
-import { db } from '../lib/db';
+import { db, supabase } from '../lib/db';
 
 vi.mock('../lib/db', () => ({
   isSupabaseConfigured: false,
@@ -142,16 +142,33 @@ describe('useAuthForm Hook Unit Tests', () => {
     expect(result.current.error).toBe('Full name is required.');
   });
 
-  it('completes registration flow successfully', async () => {
-    const mockCreatedUser = {
-      id: 'usr-new-1',
-      email: 'newuser@example.com',
-      name: 'New User',
-      role: 'buyer',
-      balance: 0,
-    };
-    (db.checkEmailExists as any).mockResolvedValueOnce(false);
-    (db.registerUser as any).mockResolvedValueOnce(mockCreatedUser);
+  it('validates required company name and phone for producer registration', async () => {
+    const { result } = renderHook(() =>
+      useAuthForm({
+        initialRole: 'producer',
+        onAuthSuccess: mockOnAuthSuccess,
+      })
+    );
+
+    act(() => {
+      result.current.setIsRegister(true);
+      result.current.setEmail('producer@example.com');
+      result.current.setPassword('password123');
+      result.current.setName('Cinema Boss');
+      result.current.setCompanyName('');
+      result.current.setPhoneNumber('');
+    });
+
+    const dummyEvent = { preventDefault: vi.fn() } as any;
+    await act(async () => {
+      await result.current.handleSubmit(dummyEvent);
+    });
+
+    expect(result.current.error).toContain('Company name and phone number are required');
+  });
+
+  it('validates if email already exists on registration', async () => {
+    (db.checkEmailExists as any).mockResolvedValueOnce(true);
 
     const { result } = renderHook(() =>
       useAuthForm({
@@ -162,8 +179,47 @@ describe('useAuthForm Hook Unit Tests', () => {
 
     act(() => {
       result.current.setIsRegister(true);
-      result.current.setEmail('newuser@example.com');
-      result.current.setName('New User');
+      result.current.setEmail('existing@example.com');
+      result.current.setPassword('password123');
+      result.current.setName('Existing User');
+    });
+
+    const dummyEvent = { preventDefault: vi.fn() } as any;
+    await act(async () => {
+      await result.current.handleSubmit(dummyEvent);
+    });
+
+    expect(result.current.error).toContain('already registered');
+  });
+
+  it('completes registration flow successfully for producer with subaccount generation', async () => {
+    const mockCreatedProducer = {
+      id: 'prod-new-1',
+      email: 'producer@example.com',
+      name: 'Producer Kofi',
+      companyName: 'Accra Theatres',
+      phoneNumber: '+233240000000',
+      role: 'producer',
+      balance: 0,
+    };
+    (db.checkEmailExists as any).mockResolvedValueOnce(false);
+    (db.registerUser as any).mockResolvedValueOnce(mockCreatedProducer);
+    (db.generatePaystackSubaccount as any).mockResolvedValueOnce('ACCT_TEST_SUB123');
+
+    const { result } = renderHook(() =>
+      useAuthForm({
+        initialRole: 'producer',
+        onAuthSuccess: mockOnAuthSuccess,
+        selectedBankCode: 'MTN',
+      })
+    );
+
+    act(() => {
+      result.current.setIsRegister(true);
+      result.current.setEmail('producer@example.com');
+      result.current.setName('Producer Kofi');
+      result.current.setCompanyName('Accra Theatres');
+      result.current.setPhoneNumber('+233240000000');
       result.current.setPassword('SecurePass123!');
       result.current.setConfirmPassword('SecurePass123!');
     });
@@ -206,6 +262,26 @@ describe('useAuthForm Hook Unit Tests', () => {
     expect(result.current.success).toContain('Welcome back');
   });
 
+  it('handles empty email in handleForgotPasswordSubmit', async () => {
+    const { result } = renderHook(() =>
+      useAuthForm({
+        initialRole: 'buyer',
+        onAuthSuccess: mockOnAuthSuccess,
+      })
+    );
+
+    act(() => {
+      result.current.setEmail('');
+    });
+
+    const dummyEvent = { preventDefault: vi.fn() } as any;
+    await act(async () => {
+      await result.current.handleForgotPasswordSubmit(dummyEvent);
+    });
+
+    expect(result.current.error).toBe('Please provide your registered email address.');
+  });
+
   it('handles password recovery request in simulation mode', async () => {
     const { result } = renderHook(() =>
       useAuthForm({
@@ -224,5 +300,47 @@ describe('useAuthForm Hook Unit Tests', () => {
     });
 
     expect(result.current.success).toContain('Password reset');
+  });
+
+  it('handles password recovery submit with validations and update', async () => {
+    const { result } = renderHook(() =>
+      useAuthForm({
+        initialRole: 'buyer',
+        onAuthSuccess: mockOnAuthSuccess,
+      })
+    );
+
+    const dummyEvent = { preventDefault: vi.fn() } as any;
+
+    // Test password too short
+    act(() => {
+      result.current.setNewPassword('123');
+      result.current.setConfirmPassword('123');
+    });
+    await act(async () => {
+      await result.current.handleRecoverySubmit(dummyEvent);
+    });
+    expect(result.current.error).toContain('at least 6 characters');
+
+    // Test password mismatch
+    act(() => {
+      result.current.setNewPassword('password123');
+      result.current.setConfirmPassword('different123');
+    });
+    await act(async () => {
+      await result.current.handleRecoverySubmit(dummyEvent);
+    });
+    expect(result.current.error).toContain('Passwords mismatch');
+
+    // Test successful password update
+    (supabase.auth.updateUser as any).mockResolvedValueOnce({ data: {}, error: null });
+    act(() => {
+      result.current.setNewPassword('SecureNewPass123!');
+      result.current.setConfirmPassword('SecureNewPass123!');
+    });
+    await act(async () => {
+      await result.current.handleRecoverySubmit(dummyEvent);
+    });
+    expect(result.current.success).toContain('Password updated successfully');
   });
 });

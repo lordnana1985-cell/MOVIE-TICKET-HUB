@@ -51,6 +51,9 @@ describe('useCameraScanner Hook', () => {
 
     expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalled();
     expect(result.current.cameraStream).toBe(mockStream);
+    expect(result.current.videoDevices.length).toBe(2);
+    // Back camera preference
+    expect(result.current.selectedDeviceId).toBe('cam-2');
   });
 
   it('handles camera permission failure gracefully', async () => {
@@ -84,5 +87,47 @@ describe('useCameraScanner Hook', () => {
 
     expect(mockTrack.stop).toHaveBeenCalled();
     expect(result.current.cameraStream).toBeNull();
+  });
+
+  it('switches camera device and updates selectedDeviceId', async () => {
+    const { result } = renderHook(() => useCameraScanner({ enabled: false }));
+
+    await act(async () => {
+      await result.current.switchCamera('cam-1');
+    });
+
+    expect(result.current.selectedDeviceId).toBe('cam-1');
+    expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({
+      video: { deviceId: { exact: 'cam-1' } },
+    });
+  });
+
+  it('handles missing mediaDevices gracefully without throwing', async () => {
+    Object.defineProperty(global.navigator, 'mediaDevices', {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    });
+
+    const { result } = renderHook(() => useCameraScanner({ enabled: false }));
+
+    await act(async () => {
+      await result.current.refreshDevices();
+      await result.current.startCamera();
+    });
+
+    expect(result.current.cameraError).toContain('Could not access the camera');
+  });
+
+  it('updates scanStatus and capturing states', () => {
+    const { result } = renderHook(() => useCameraScanner({ enabled: false }));
+
+    act(() => {
+      result.current.setIsCapturing(true);
+      result.current.setScanStatus('Scanning barcode frame...');
+    });
+
+    expect(result.current.isCapturing).toBe(true);
+    expect(result.current.scanStatus).toBe('Scanning barcode frame...');
   });
 });

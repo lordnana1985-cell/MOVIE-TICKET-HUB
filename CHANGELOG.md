@@ -8,27 +8,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Admin Portal (`AdminPortal.tsx`)**: System administrative dashboard with live analytics, volume metrics, database inspection, audit log monitoring, and granular control over simulation environments.
-- **Custom Hooks Architecture**:
-  - `useCameraScanner`: Encapsulated camera hardware discovery, permission management, track cleanup, and live HUD scanning simulation.
-  - `useBankList`: Centralized Paystack banking partners lookup across Ghana (GHS) and Nigeria (NGN) with offline fallback data.
-- **Structured Database Error Handling**:
-  - Introduced typed `DbError` extending `AppError` with operation tags, fallback flags, and structured cause chains.
-  - Comprehensive unit test suites for database fallback and data synchronization (`errors.test.ts`, `profiles.test.ts`, `purchases.test.ts`).
-- **Structured Logging (`logger.ts`)**:
-  - Standardized JSON formatting across environments with context tags and test-suite noise suppression.
-  - Added `logger.test.ts` unit verification.
+- **Server Structured Logging & Observability (`server.ts`)**:
+  - Integrated `pino` high-performance structured JSON logger with ISO timestamping and route metadata across all Paystack endpoints.
+  - Added request ID tracking middleware (`x-request-id` header injection and propagation).
+  - Integrated optional Sentry error reporting with `@sentry/node`, gated safely by `SENTRY_DSN`.
+  - Enhanced `/api/health` diagnostic endpoint reporting runtime connectivity checks for Supabase, Paystack, and Sentry.
+- **Subaccount Verification Architecture**:
+  - `useSubaccountVerification`: Encapsulated 6-digit confirmation code generation, countdown timers, email dispatch simulation, and verification logic with paired tests (`useSubaccountVerification.test.ts`).
+- **Admin Tab Toggle Architecture**:
+  - `useAdminTabToggle`: Encapsulated hidden administrative portal access, query param checks (`?admin=true`), secret logo click counter (5 taps), and cross-tab storage synchronization with paired tests (`useAdminTabToggle.test.ts`).
+- **Extracted Modular Subcomponents**:
+  - `CameraScannerView.tsx` & `CameraScannerView.test.tsx`: Isolated live camera viewport, lens selectors, stream status banners, and capture controls.
+  - `QuickPassSimulator.tsx` & `QuickPassSimulator.test.tsx`: Isolated quick test pass list and pass triggers for fast gate testing.
+  - `RoleSwitcher.tsx` & `RoleSwitcher.test.tsx`: Isolated customer, organiser, and admin role switching pill grid.
+  - `ProducerHeader.tsx` & `ProducerHeader.test.tsx`: Isolated organiser console banner, payout telephone badge, and modal toggles.
+- **Offline Reproducibility Documentation**:
+  - Added comprehensive 'Running tests offline (Fresh-Clone Reproducibility)' subsection to `README.md` verifying zero external accounts needed.
 
 ### Changed
-- **Decomposed Monolith Components**:
-  - Refactored `GateScanner.tsx` to consume `useCameraScanner` and centralized logging.
-  - Refactored `AuthPage.tsx` and `ProducerDashboard.tsx` to consume `useBankList` and unified logger.
-- **CI / CD Pipeline Hardening**:
-  - Upgraded GitHub Actions workflow to Node.js 22 LTS with caching.
-  - Enforced strict security audit gates (`npm audit --audit-level=high`) with no bypass.
-- **Type Safety & Testing**:
-  - Removed remaining `any` types from database catch blocks in `profiles.ts`, `purchases.ts`, and `tickets.ts`.
-  - Expanded test suites across components and hooks with Vitest and `@testing-library/react`.
+- **Decomposed Monolith Components Under 300 LOC (Risk Surface Reduction)**:
+  - `src/components/ProducerDashboard.tsx` reduced from 476 to 288 LOC (<300 LOC).
+  - `src/components/AuthPage.tsx` reduced from 374 to 272 LOC (<300 LOC).
+  - `src/components/GateScanner.tsx` reduced from 372 to 188 LOC (<300 LOC).
+- **Test Breadth & Coverage Expansion**:
+  - Expanded `useAuthForm.test.ts` to test producer registration requirements, existing email detection, password recovery validation, and reset submissions.
+  - Expanded `useCameraScanner.test.ts` to test camera switching, environment camera selection, and missing mediaDevices environment resilience.
+  - Added unit test suite in `src/test/server.routes.test.ts` for health diagnostics, request IDs, and logger output.
 
 ## [0.1.0] - 2026-08-24
 

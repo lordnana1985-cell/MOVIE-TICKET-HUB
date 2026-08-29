@@ -271,11 +271,28 @@ npm run lint:eslint
 npm run format:check
 ```
 
+### 📴 Running Tests Offline (Fresh-Clone Reproducibility)
+
+The test suite is architected for **100% offline reproducibility on fresh clones** without requiring any external accounts, API keys, or active internet connectivity:
+
+1. **Zero External Credentials Required**: Neither Paystack nor Supabase accounts or secrets are needed to run tests. All API endpoints and SDK clients operate via deterministic mock responses and local fallback engines.
+2. **Fresh Clone Execution**:
+   ```bash
+   git clone <repo-url>
+   cd movie-ticket-hub
+   npm install
+   npm test
+   ```
+3. **In-Memory & Storage Isolation**:
+   - Database operations in test environments use an in-memory mock store and isolated LocalStorage polyfill that automatically resets between tests.
+   - Supertest tests in `src/test/server.routes.test.ts` boot an isolated Express instance without binding to external network interfaces.
+   - Hardware APIs (Camera streams, `navigator.mediaDevices`) and Paystack HTTP endpoints are mocked with Vitest spies, ensuring zero network timeouts or intermittent failures.
+
 ### Coverage & Test Strategy
 - **Lines Coverage**: >50% enforced in CI (`vitest.config.ts`)
 - **Branches Coverage**: >40% enforced in CI
 - **Zero External Dependencies in Tests**: All unit tests run against in-memory mocks, isolated localStorage simulators, and Vitest spy handlers, requiring zero live external services or active internet connectivity.
-- **Test Suites**: 35+ test files covering Components, Database adapters, Custom Hooks, Schemas, and Server API routes.
+- **Test Suites**: 38+ test files covering Components, Database adapters, Custom Hooks, Schemas, and Server API routes.
 
 ---
 

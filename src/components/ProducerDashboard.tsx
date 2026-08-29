@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback, FormEvent } from 'react';
-import { Plus, Film, ArrowRight, Trash2, Phone } from 'lucide-react';
+import { useState, useEffect, useCallback, FormEvent } from 'react';
+import { Film, Trash2 } from 'lucide-react';
 import { UserProfile, MovieTicket, TicketPurchase } from '../types';
 import { db } from '../lib/db';
 import { logger } from '../lib/logger';
 import { useBankList } from '../hooks/useBankList';
+import { useSubaccountVerification } from '../hooks/useSubaccountVerification';
 import { EmbeddedSupportCard } from './CustomerSupport';
 import TicketForm from './producer/TicketForm';
 import MetricsOverview from './producer/MetricsOverview';
@@ -11,6 +12,7 @@ import SubaccountSetup from './producer/SubaccountSetup';
 import SalesFeed from './producer/SalesFeed';
 import ProducerTicketCard from './producer/ProducerTicketCard';
 import ClearAllModal from './producer/ClearAllModal';
+import ProducerHeader from './producer/ProducerHeader';
 
 interface ProducerDashboardProps {
   user: UserProfile;
@@ -42,7 +44,7 @@ export default function ProducerDashboard({
   // Form Country
   const [setupCountry, setSetupCountry] = useState<'GHS' | 'NGN'>('GHS');
 
-  // Paystack subaccount configuration states & hook
+  // Paystack subaccount configuration states & hooks
   const [bankSubaccount, setBankSubaccount] = useState<string | undefined>(
     user.paystackSubaccountCode
   );
@@ -57,24 +59,23 @@ export default function ProducerDashboard({
     enabled: true,
   });
 
+  const {
+    userEnteredCode,
+    setUserEnteredCode,
+    showVerificationInput,
+    setShowVerificationInput,
+    verificationError,
+    resendCooldown,
+    initiateVerification,
+    resendVerificationCode,
+    verifyEnteredCode,
+    resetVerification,
+  } = useSubaccountVerification();
+
   const [isSubmittingSubaccount, setIsSubmittingSubaccount] = useState(false);
   const [subaccountError, setSubaccountError] = useState('');
   const [subaccountSuccess, setSubaccountSuccess] = useState('');
   const [isEditingSubaccount, setIsEditingSubaccount] = useState(!user.paystackSubaccountCode);
-
-  // 4-digit code verification for editing/changing account
-  const [generatedCode, setGeneratedCode] = useState('');
-  const [userEnteredCode, setUserEnteredCode] = useState('');
-  const [showVerificationInput, setShowVerificationInput] = useState(false);
-  const [verificationError, setVerificationError] = useState('');
-  const [resendCooldown, setResendCooldown] = useState(0);
-
-  useEffect(() => {
-    if (resendCooldown > 0) {
-      const timer = setTimeout(() => setResendCooldown((prev) => prev - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [resendCooldown]);
 
   // Form Fields
   const [setupBusinessName, setSetupBusinessName] = useState(
@@ -85,26 +86,9 @@ export default function ProducerDashboard({
   );
 
   const handleResendCode = async () => {
-    if (resendCooldown > 0) return;
-    const newCode = Math.floor(1000 + Math.random() * 9000).toString();
-    setGeneratedCode(newCode);
-    setUserEnteredCode('');
-    setVerificationError('');
-    setResendCooldown(60);
-
-    try {
-      await fetch('/api/send-verification-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: user.email,
-          code: newCode,
-          purpose: 'payout_account_change_resend',
-        }),
-      });
+    const code = await resendVerificationCode(user.email);
+    if (code) {
       setSubaccountSuccess(`Verification code resent to ${user.email}.`);
-    } catch (err) {
-      logger.error('Failed to resend verification code email', 'ProducerDashboard', err);
     }
   };
 
@@ -112,41 +96,16 @@ export default function ProducerDashboard({
     e.preventDefault();
     setSubaccountError('');
     setSubaccountSuccess('');
-    setVerificationError('');
 
-    // Check if they are updating an existing subaccount
+    // Check if updating existing subaccount
     if (bankSubaccount && !showVerificationInput) {
-      const code = Math.floor(1000 + Math.random() * 9000).toString();
-      setGeneratedCode(code);
-      setShowVerificationInput(true);
-      setResendCooldown(60);
-
-      try {
-        await fetch('/api/send-verification-code', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: user.email,
-            code,
-            purpose: 'payout_account_change',
-          }),
-        });
-      } catch (err) {
-        logger.error('Failed to dispatch verification code email', 'ProducerDashboard', err);
-      }
+      await initiateVerification(user.email);
       return;
     }
 
     if (showVerificationInput) {
-      if (userEnteredCode !== generatedCode) {
-        setVerificationError(
-          'Invalid 4-digit verification code. Please confirm the code sent to your email.'
-        );
-        return;
-      }
-      setShowVerificationInput(false);
-      setGeneratedCode('');
-      setUserEnteredCode('');
+      const isValid = verifyEnteredCode();
+      if (!isValid) return;
     }
 
     setIsSubmittingSubaccount(true);
@@ -213,9 +172,9 @@ export default function ProducerDashboard({
             setIsEditingSubaccount(false);
             onTicketCreated();
           }
-        } catch (err: unknown) {
+        } catch (err) {
           logger.error(
-            'Auto generation of Paystack subaccount on dashboard mount failed',
+            'Failed to auto-generate default demo subaccount for producer',
             'ProducerDashboard',
             err
           );
@@ -272,57 +231,15 @@ export default function ProducerDashboard({
   return (
     <div className="space-y-8 animate-fadeIn" id="producer-dashboard-container">
       {/* HEADER SECTION */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <span className="text-xs font-mono tracking-widest text-gold font-semibold uppercase">
-            {user.companyName || 'Event Production'} Organiser Portal
-          </span>
-          <h2 className="font-display text-3xl font-extrabold tracking-tight text-white mt-1">
-            Event Organiser{' '}
-            <span className="bg-gradient-to-r from-sky-light to-sky-deep bg-clip-text text-transparent">
-              Console
-            </span>
-          </h2>
-          <p className="text-sm text-gray-400 mt-1">
-            Manage your event tickets, upload trailers/covers, generate tickets, and view real-time
-            earnings.
-          </p>
-          {user.phoneNumber && (
-            <div className="mt-3 inline-flex items-center gap-2 rounded-xl bg-gold/10 border border-gold/20 px-3.5 py-2 text-xs text-gold font-mono">
-              <Phone className="h-3.5 w-3.5 text-gold-light animate-pulse" />
-              <span>
-                Payout Phone: <strong className="text-white font-sans">{user.phoneNumber}</strong>
-              </span>
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => {
-              if (onOpenGateScanner) {
-                onOpenGateScanner();
-              } else if (setActiveTab) {
-                setActiveTab('gate_auth');
-              }
-            }}
-            className="rounded-xl glass-panel px-4 py-3 text-sm font-semibold text-white hover:bg-white/10 transition-all border border-white/15 shadow-md flex items-center gap-2 cursor-pointer"
-            id="gate-verifier-nav-btn"
-          >
-            Gate Ticket Verifier
-            <ArrowRight className="h-4 w-4 text-gold" />
-          </button>
-
-          <button
-            onClick={() => setIsCreating(!isCreating)}
-            className="rounded-xl bg-gradient-to-r from-gold to-gold-dark px-5 py-3 text-sm font-bold text-black hover:brightness-105 shadow-lg shadow-gold/10 transition-all flex items-center gap-2 cursor-pointer"
-            id="producer-add-ticket-btn"
-          >
-            <Plus className="h-4 w-4 stroke-[3px]" />
-            Generate Event Ticket
-          </button>
-        </div>
-      </div>
+      <ProducerHeader
+        user={user}
+        isCreating={isCreating}
+        onToggleCreating={() => setIsCreating(!isCreating)}
+        onOpenGateScanner={
+          onOpenGateScanner ||
+          (setActiveTab ? () => setActiveTab('gate_auth') : undefined)
+        }
+      />
 
       {(error || success) && (
         <div
@@ -398,6 +315,7 @@ export default function ProducerDashboard({
                 You haven't generated any event premier tickets yet.
               </p>
               <button
+                type="button"
                 onClick={() => setIsCreating(true)}
                 className="mt-4 rounded-xl border border-gold/30 hover:border-gold text-gold px-4 py-2 text-xs font-semibold hover:bg-gold/10 transition-all cursor-pointer"
               >
@@ -455,10 +373,7 @@ export default function ProducerDashboard({
             handleCreateSubaccount={handleCreateSubaccount}
             onCancelEdit={() => {
               setIsEditingSubaccount(false);
-              setShowVerificationInput(false);
-              setGeneratedCode('');
-              setUserEnteredCode('');
-              setVerificationError('');
+              resetVerification();
             }}
           />
 

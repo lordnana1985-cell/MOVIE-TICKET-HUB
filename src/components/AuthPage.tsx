@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { User, Shield, Film, CheckCircle2, Lock, AlertCircle, ArrowLeft } from 'lucide-react';
+import { useEffect } from 'react';
+import { User, Film, CheckCircle2, AlertCircle, ArrowLeft } from 'lucide-react';
 import { UserProfile, UserRole } from '../types';
 import { useBankList } from '../hooks/useBankList';
 import { useAuthForm } from '../hooks/useAuthForm';
+import { useAdminTabToggle } from '../hooks/useAdminTabToggle';
 import SignInForm from './auth/SignInForm';
 import SignUpForm from './auth/SignUpForm';
 import ForgotPasswordForm from './auth/ForgotPasswordForm';
 import PasswordRecoveryModal from './auth/PasswordRecoveryModal';
 import AuthHeroBanner from './auth/AuthHeroBanner';
+import RoleSwitcher from './auth/RoleSwitcher';
 
 interface AuthPageProps {
   initialRole: UserRole;
@@ -27,18 +29,7 @@ export default function AuthPage({
   const handleAuthComplete = onAuthSuccess || onSuccess || (() => {});
   const handleCancelAction = onCancel || onBackToMarket;
 
-  const [showAdminTab, setShowAdminTab] = useState(() => {
-    try {
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('admin') === 'true' || urlParams.get('showAdmin') === 'true') {
-        return true;
-      }
-      return localStorage.getItem('mt_hub_show_admin_tab') === 'true';
-    } catch {
-      return false;
-    }
-  });
-  const [logoClicks, setLogoClicks] = useState(0);
+  const { showAdminTab, handleLogoClick } = useAdminTabToggle();
 
   const {
     bankList,
@@ -93,17 +84,6 @@ export default function AuthPage({
   });
 
   useEffect(() => {
-    const handleToggle = () => {
-      const nextState = localStorage.getItem('mt_hub_show_admin_tab') === 'true';
-      setShowAdminTab(nextState);
-    };
-    window.addEventListener('mt_hub_toggle_admin_tab', handleToggle);
-    return () => {
-      window.removeEventListener('mt_hub_toggle_admin_tab', handleToggle);
-    };
-  }, []);
-
-  useEffect(() => {
     if (!showAdminTab && role === 'admin') {
       setRole('buyer');
     }
@@ -135,6 +115,7 @@ export default function AuthPage({
           {handleCancelAction && (
             <div className="lg:hidden mb-6">
               <button
+                type="button"
                 onClick={handleCancelAction}
                 className="inline-flex items-center gap-1.5 text-[10px] font-semibold tracking-wider text-gray-400 hover:text-white transition-colors uppercase font-mono cursor-pointer"
               >
@@ -172,16 +153,7 @@ export default function AuthPage({
               <>
                 <div className="text-center lg:text-left">
                   <div
-                    onClick={() => {
-                      const newClicks = logoClicks + 1;
-                      setLogoClicks(newClicks);
-                      if (newClicks >= 5) {
-                        const nextState = !showAdminTab;
-                        localStorage.setItem('mt_hub_show_admin_tab', String(nextState));
-                        window.dispatchEvent(new Event('mt_hub_toggle_admin_tab'));
-                        setLogoClicks(0);
-                      }
-                    }}
+                    onClick={handleLogoClick}
                     className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-black to-white/10 border border-white/10 mb-4 cursor-pointer select-none active:scale-95 transition-all"
                     title="Portal Trigger"
                   >
@@ -199,76 +171,27 @@ export default function AuthPage({
                     {role === 'admin'
                       ? 'Admin Control Portal'
                       : role === 'producer'
-                        ? 'Organiser Portal'
-                        : 'Buyer Portal'}
+                        ? 'Event Organiser Portal'
+                        : 'Cinema & Event Access'}
                   </h2>
                   <p className="text-xs text-gray-400 mt-1">
-                    {isRegister
-                      ? 'Register your event organiser or buyer profile'
-                      : role === 'admin'
-                        ? 'SIGN IN TO DEPLOY AND REGULATE CINEMAS'
-                        : role === 'producer'
-                          ? 'SIGN IN TO PUBLISH LIVE EVENT TICKETS'
-                          : 'Sign in to access tickets, trailers and events'}
+                    {role === 'admin'
+                      ? 'Elevated authorization required for platform controls'
+                      : isRegister
+                        ? 'Create your credentials to publish and book tickets'
+                        : 'Sign in to access your digital tickets and dashboard'}
                   </p>
                 </div>
 
-                <div
-                  className={`grid ${
-                    showAdminTab ? 'grid-cols-3' : 'grid-cols-2'
-                  } gap-2 p-1 rounded-xl bg-black/40 border border-white/5`}
-                >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setRole('buyer');
-                      setError('');
-                    }}
-                    className={`flex items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold tracking-wide transition-all cursor-pointer ${
-                      role === 'buyer'
-                        ? 'bg-sky-deep text-white shadow-lg'
-                        : 'text-gray-400 hover:text-white hover:bg-white/5'
-                    }`}
-                    id="page-buyer-portal-tab"
-                  >
-                    <User className="h-3.5 w-3.5" />
-                    Buyer
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setRole('producer');
-                      setError('');
-                    }}
-                    className={`flex items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold tracking-wide transition-all cursor-pointer ${
-                      role === 'producer'
-                        ? 'bg-gradient-to-r from-gold to-gold-dark text-black font-bold shadow-lg shadow-gold/10'
-                        : 'text-gray-400 hover:text-white hover:bg-white/5'
-                    }`}
-                    id="page-producer-portal-tab"
-                  >
-                    <Shield className="h-3.5 w-3.5" />
-                    Organiser
-                  </button>
-                  {showAdminTab && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRole('admin');
-                        setError('');
-                      }}
-                      className={`flex items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold tracking-wide transition-all cursor-pointer ${
-                        role === 'admin'
-                          ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white font-bold shadow-lg shadow-rose-950/50'
-                          : 'text-gray-400 hover:text-white hover:bg-white/5'
-                      }`}
-                      id="page-admin-portal-tab"
-                    >
-                      <Lock className="h-3.5 w-3.5" />
-                      Admin
-                    </button>
-                  )}
-                </div>
+                {/* Role Switcher Component */}
+                <RoleSwitcher
+                  role={role}
+                  onRoleChange={(newRole) => {
+                    setRole(newRole);
+                    setError('');
+                  }}
+                  showAdminTab={showAdminTab}
+                />
 
                 {success && (
                   <div className="flex items-center gap-2.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3.5 text-xs font-medium text-emerald-400 animate-fadeIn">
@@ -350,6 +273,7 @@ export default function AuthPage({
                 <div className="text-center text-xs text-gray-400 pt-2 border-t border-white/5">
                   {isRegister ? 'Already have an account?' : "Don't have an account yet?"}{' '}
                   <button
+                    type="button"
                     onClick={toggleMode}
                     className={`font-semibold hover:underline bg-transparent border-none cursor-pointer ${
                       role === 'admin'

@@ -1,24 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  ScanLine,
-  Camera,
-  Search,
-  ArrowRight,
-  ArrowLeft,
-  User,
-  Film,
-  KeyRound,
-  QrCode,
-  RefreshCw,
-  Video,
-  AlertTriangle,
-} from 'lucide-react';
+import { ScanLine, KeyRound, ArrowRight, ArrowLeft, Camera } from 'lucide-react';
 import { UserProfile, TicketPurchase, GateLog } from '../types';
 import { db } from '../lib/db';
 import { logger } from '../lib/logger';
 import { useCameraScanner } from '../hooks/useCameraScanner';
 import GateLogList from './scanner/GateLogList';
 import ScanResultModal from './scanner/ScanResultModal';
+import CameraScannerView from './scanner/CameraScannerView';
+import QuickPassSimulator from './scanner/QuickPassSimulator';
 
 interface GateScannerProps {
   user: UserProfile;
@@ -53,28 +42,6 @@ export default function GateScanner({ user, onBack }: GateScannerProps) {
     enabled: isScanningMode,
   });
 
-  const handleCaptureAndScan = async () => {
-    if (isCapturing) return;
-    setIsCapturing(true);
-    setScanStatus('Analyzing camera frame for ticket barcodes...');
-
-    setTimeout(() => {
-      const pendingTicket =
-        purchasableTickets.find((p) => p.status === 'unused') || purchasableTickets[0];
-      if (pendingTicket) {
-        setScanStatus(`Found code: ${pendingTicket.id}! Validating...`);
-        setTimeout(async () => {
-          await handleAuthenticate(pendingTicket.id);
-          setIsCapturing(false);
-          setScanStatus('Pass validated. Ready for next ticket...');
-        }, 800);
-      } else {
-        setScanStatus('No valid QR/Barcode detected. Hold steady.');
-        setIsCapturing(false);
-      }
-    }, 1200);
-  };
-
   const loadLogsAndTickets = useCallback(async () => {
     try {
       const allPurchases = await db.getPurchasesForProducer(user.id);
@@ -108,8 +75,26 @@ export default function GateScanner({ user, onBack }: GateScannerProps) {
     }
   };
 
-  const simulateQuickScan = (purchase: TicketPurchase) => {
-    handleAuthenticate(purchase.id);
+  const handleCaptureAndScan = async () => {
+    if (isCapturing) return;
+    setIsCapturing(true);
+    setScanStatus('Analyzing camera frame for ticket barcodes...');
+
+    setTimeout(() => {
+      const pendingTicket =
+        purchasableTickets.find((p) => p.status === 'unused') || purchasableTickets[0];
+      if (pendingTicket) {
+        setScanStatus(`Found code: ${pendingTicket.id}! Validating...`);
+        setTimeout(async () => {
+          await handleAuthenticate(pendingTicket.id);
+          setIsCapturing(false);
+          setScanStatus('Pass validated. Ready for next ticket...');
+        }, 800);
+      } else {
+        setScanStatus('No valid QR/Barcode detected. Hold steady.');
+        setIsCapturing(false);
+      }
+    }, 1200);
   };
 
   return (
@@ -198,6 +183,7 @@ export default function GateScanner({ user, onBack }: GateScannerProps) {
                   />
                 </div>
                 <button
+                  type="button"
                   onClick={() => handleAuthenticate()}
                   className="rounded-xl bg-gradient-to-r from-gold to-gold-dark px-6 py-3.5 text-sm font-bold text-black hover:brightness-105 transition-all flex items-center justify-center gap-2"
                   id="manual-auth-submit-btn"
@@ -207,154 +193,25 @@ export default function GateScanner({ user, onBack }: GateScannerProps) {
                 </button>
               </div>
             ) : (
-              <div className="space-y-4">
-                <style>{`
-                  @keyframes scan {
-                    0% { top: 8%; }
-                    50% { top: 92%; }
-                    100% { top: 8%; }
-                  }
-                  .scanner-laser {
-                    position: absolute;
-                    left: 0;
-                    right: 0;
-                    height: 2px;
-                    background: linear-gradient(90deg, transparent, rgba(234, 179, 8, 0.9), transparent);
-                    box-shadow: 0 0 12px rgba(234, 179, 8, 0.9);
-                    animation: scan 2.5s infinite linear;
-                    pointer-events: none;
-                    z-index: 20;
-                  }
-                `}</style>
-
-                {videoDevices.length > 1 && (
-                  <div className="flex items-center gap-2 bg-black/40 border border-white/5 rounded-xl px-3 py-2 text-xs">
-                    <Video className="h-3.5 w-3.5 text-gold shrink-0" />
-                    <span className="text-gray-400 font-mono text-[10px]">SELECT LENS:</span>
-                    <select
-                      value={selectedDeviceId}
-                      onChange={(e) => setSelectedDeviceId(e.target.value)}
-                      className="bg-transparent border-none text-white text-xs font-mono focus:outline-none flex-1 cursor-pointer"
-                    >
-                      {videoDevices.map((device, idx) => (
-                        <option
-                          key={device.deviceId}
-                          value={device.deviceId}
-                          className="bg-black text-white"
-                        >
-                          {device.label || `Camera ${idx + 1}`}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                <div className="relative rounded-2xl overflow-hidden bg-black aspect-video border border-white/10 shadow-2xl flex flex-col justify-center items-center">
-                  <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-gold/60 pointer-events-none z-10" />
-                  <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-gold/60 pointer-events-none z-10" />
-                  <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-gold/60 pointer-events-none z-10" />
-                  <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-gold/60 pointer-events-none z-10" />
-
-                  {cameraError ? (
-                    <div className="p-6 text-center max-w-sm space-y-3 z-10">
-                      <div className="h-12 w-12 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center mx-auto">
-                        <AlertTriangle className="h-6 w-6" />
-                      </div>
-                      <p className="text-xs text-red-400 font-mono">{cameraError}</p>
-                      <button
-                        type="button"
-                        onClick={() => startCamera()}
-                        className="rounded-lg bg-white/10 hover:bg-white/20 px-3 py-1.5 text-xs text-white transition-colors"
-                      >
-                        Retry Camera
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <video
-                        ref={videoRef}
-                        playsInline
-                        muted
-                        className={`h-full w-full object-cover transition-opacity duration-500 ${
-                          cameraStream ? 'opacity-90' : 'opacity-0'
-                        }`}
-                      />
-
-                      {cameraStream && <div className="scanner-laser" />}
-
-                      <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-black/40 backdrop-blur-[2px] pointer-events-none">
-                        <div className="w-48 h-48 sm:w-56 sm:h-56 border border-gold/40 rounded-2xl relative flex items-center justify-center shadow-[0_0_50px_rgba(234,179,8,0.15)]">
-                          <QrCode className="h-16 w-16 text-gold/30" />
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-black/30 border border-white/5 rounded-xl p-3 text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-gray-300 font-mono text-[11px]">{scanStatus}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleCaptureAndScan}
-                    disabled={isCapturing}
-                    className="w-full sm:w-auto rounded-lg bg-gold/20 hover:bg-gold/30 border border-gold/40 px-4 py-2 text-xs font-bold text-gold hover:text-white transition-all flex items-center justify-center gap-1.5"
-                  >
-                    <RefreshCw className={`h-3.5 w-3.5 ${isCapturing ? 'animate-spin' : ''}`} />
-                    {isCapturing ? 'Analyzing...' : 'Scan Active Frame'}
-                  </button>
-                </div>
-              </div>
+              <CameraScannerView
+                videoRef={videoRef}
+                videoDevices={videoDevices}
+                selectedDeviceId={selectedDeviceId}
+                setSelectedDeviceId={setSelectedDeviceId}
+                cameraStream={cameraStream}
+                cameraError={cameraError}
+                startCamera={startCamera}
+                isCapturing={isCapturing}
+                scanStatus={scanStatus}
+                onScanFrame={handleCaptureAndScan}
+              />
             )}
 
             {/* SIMULATOR QUICK VALIDATOR */}
-            <div className="pt-4 border-t border-white/10 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
-                  <Search className="h-3.5 w-3.5 text-gold" />
-                  Quick Pass Simulator (Active Database)
-                </span>
-                <span className="text-[10px] text-gray-500 font-mono">
-                  {purchasableTickets.length} Passes On File
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
-                {purchasableTickets.slice(0, 6).map((purchase) => (
-                  <button
-                    key={purchase.id}
-                    onClick={() => simulateQuickScan(purchase)}
-                    className="group rounded-xl bg-white/5 border border-white/10 p-2.5 text-left hover:border-gold/50 transition-all flex items-center justify-between"
-                  >
-                    <div className="min-w-0 pr-2">
-                      <div className="flex items-center gap-1.5 text-xs text-white font-medium truncate">
-                        <Film className="h-3 w-3 text-gold shrink-0" />
-                        <span className="truncate">{purchase.movieTitle}</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-[10px] text-gray-400 font-mono mt-0.5">
-                        <User className="h-2.5 w-2.5" />
-                        <span className="truncate">{purchase.buyerName}</span>
-                        <span className="text-gray-600">•</span>
-                        <span className="text-gray-500 font-bold">
-                          {purchase.id.substring(0, 10)}...
-                        </span>
-                      </div>
-                    </div>
-                    <span
-                      className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase ${
-                        purchase.status === 'unused'
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                          : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                      }`}
-                    >
-                      {purchase.status}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
+            <QuickPassSimulator
+              purchasableTickets={purchasableTickets}
+              onQuickScan={(purchase) => handleAuthenticate(purchase.id)}
+            />
           </div>
 
           {/* SCAN RESULT MODAL */}

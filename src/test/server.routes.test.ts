@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
-import app, { getPaystackSecretKey, paystackFetch } from '../../server';
+import app, { getPaystackSecretKey, paystackFetch, getSupabaseServerStatus } from '../../server';
 
 describe('Server API Routes & Integration Tests', () => {
   const originalEnv = process.env;
@@ -15,12 +15,32 @@ describe('Server API Routes & Integration Tests', () => {
     vi.restoreAllMocks();
   });
 
-  it('GET /api/health returns status ok with diagnostic information', async () => {
+  it('GET /api/health returns status ok with diagnostic and connectivity information', async () => {
     const res = await request(app).get('/api/health');
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('ok');
     expect(typeof res.body.timestamp).toBe('string');
     expect(typeof res.body.paystackConfigured).toBe('boolean');
+    expect(res.body.paystack).toHaveProperty('configured');
+    expect(res.body.paystack).toHaveProperty('mode');
+    expect(res.body.supabase).toHaveProperty('configured');
+    expect(res.body.supabase).toHaveProperty('mode');
+    expect(res.body.sentry).toHaveProperty('enabled');
+    expect(res.headers['x-request-id']).toBeDefined();
+  });
+
+  it('correctly evaluates getSupabaseServerStatus based on environment variables', () => {
+    delete process.env.VITE_SUPABASE_URL;
+    delete process.env.VITE_SUPABASE_ANON_KEY;
+    const simStatus = getSupabaseServerStatus();
+    expect(simStatus.configured).toBe(false);
+    expect(simStatus.mode).toBe('simulation');
+
+    process.env.VITE_SUPABASE_URL = 'https://demo-project.supabase.co';
+    process.env.VITE_SUPABASE_ANON_KEY = 'real-anon-key-12345';
+    const liveStatus = getSupabaseServerStatus();
+    expect(liveStatus.configured).toBe(true);
+    expect(liveStatus.mode).toBe('live');
   });
 
   it('GET /api/paystack/banks returns default banks in demo mode', async () => {

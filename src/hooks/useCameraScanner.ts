@@ -40,27 +40,31 @@ export function useCameraScanner(options: UseCameraScannerOptions = {}): UseCame
     }
   }, []);
 
-  const refreshDevices = useCallback(async () => {
-    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) {
-      return;
-    }
-    try {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoInputs = devices.filter((device) => device.kind === 'videoinput');
-      setVideoDevices(videoInputs);
-      if (videoInputs.length > 0 && !selectedDeviceId) {
-        const backCam = videoInputs.find(
-          (d) =>
-            d.label.toLowerCase().includes('back') ||
-            d.label.toLowerCase().includes('environment') ||
-            d.label.toLowerCase().includes('rear')
-        );
-        setSelectedDeviceId(backCam ? backCam.deviceId : videoInputs[0].deviceId);
+  const refreshDevices = useCallback(
+    async (currentDeviceId?: string) => {
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) {
+        return;
       }
-    } catch (err: unknown) {
-      logger.error('Error enumerating cameras', 'useCameraScanner', err);
-    }
-  }, [selectedDeviceId]);
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoInputs = devices.filter((device) => device.kind === 'videoinput');
+        setVideoDevices(videoInputs);
+        const activeId = currentDeviceId ?? selectedDeviceId;
+        if (videoInputs.length > 0 && !activeId) {
+          const backCam = videoInputs.find(
+            (d) =>
+              d.label.toLowerCase().includes('back') ||
+              d.label.toLowerCase().includes('environment') ||
+              d.label.toLowerCase().includes('rear')
+          );
+          setSelectedDeviceId(backCam ? backCam.deviceId : videoInputs[0].deviceId);
+        }
+      } catch (err: unknown) {
+        logger.error('Error enumerating cameras', 'useCameraScanner', err);
+      }
+    },
+    [selectedDeviceId]
+  );
 
   const stopCamera = useCallback(() => {
     if (cameraStream) {
@@ -93,7 +97,7 @@ export function useCameraScanner(options: UseCameraScannerOptions = {}): UseCame
 
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         setCameraStream(stream);
-        await refreshDevices();
+        await refreshDevices(targetDevice);
       } catch (err: unknown) {
         logger.error('Error starting camera', 'useCameraScanner', err);
         const errorMsg =
