@@ -57,10 +57,10 @@ export function getSupabaseServerStatus() {
     '';
   const isConfigured = Boolean(
     supabaseUrl &&
-      supabaseKey &&
-      (supabaseUrl.startsWith('http://') || supabaseUrl.startsWith('https://')) &&
-      !supabaseUrl.includes('placeholder') &&
-      !supabaseUrl.includes('your-project')
+    supabaseKey &&
+    (supabaseUrl.startsWith('http://') || supabaseUrl.startsWith('https://')) &&
+    !supabaseUrl.includes('placeholder') &&
+    !supabaseUrl.includes('your-project')
   );
   return {
     configured: isConfigured,

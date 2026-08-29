@@ -63,7 +63,6 @@ export default function ProducerDashboard({
     userEnteredCode,
     setUserEnteredCode,
     showVerificationInput,
-    setShowVerificationInput,
     verificationError,
     resendCooldown,
     initiateVerification,
@@ -236,8 +235,7 @@ export default function ProducerDashboard({
         isCreating={isCreating}
         onToggleCreating={() => setIsCreating(!isCreating)}
         onOpenGateScanner={
-          onOpenGateScanner ||
-          (setActiveTab ? () => setActiveTab('gate_auth') : undefined)
+          onOpenGateScanner || (setActiveTab ? () => setActiveTab('gate_auth') : undefined)
         }
       />
 

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { User, Film, CheckCircle2, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Film, CheckCircle2, AlertCircle, ArrowLeft } from 'lucide-react';
 import { UserProfile, UserRole } from '../types';
 import { useBankList } from '../hooks/useBankList';
 import { useAuthForm } from '../hooks/useAuthForm';
