@@ -37,6 +37,8 @@ import {
   deleteProfile,
 } from './db/profiles';
 
+import { createPaystackSubaccount, registerProducerSubaccount } from './db/producer';
+
 export {
   supabase,
   SUPABASE_URL,
@@ -47,6 +49,8 @@ export {
   clearSupabaseLastError,
   getSupabaseStatus,
   notifyTicketsChanged,
+  createPaystackSubaccount,
+  registerProducerSubaccount,
 };
 
 export const db = {
@@ -59,6 +63,8 @@ export const db = {
   getUserProfile,
   updateUserProfile,
   generatePaystackSubaccount,
+  createPaystackSubaccount,
+  registerProducerSubaccount,
   checkUserEmailConfirmed,
   resendVerificationEmail,
   getAllProfiles,

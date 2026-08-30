@@ -298,6 +298,19 @@ app.post('/api/paystack/initialize', async (req: Request, res: Response) => {
   if (!secretKey) {
     const demoRef = 'demo_ref_' + Math.random().toString(36).substring(2, 12);
     const separator = callback_url && callback_url.includes('?') ? '&' : '?';
+    const totalAmount = Number(amount) || 0;
+    const splitData = subaccount_code
+      ? {
+          subaccount: subaccount_code,
+          producer_share: 80,
+          hub_share: 20,
+          producer_share_percentage: 80,
+          platform_share_percentage: 20,
+          producer_amount: Math.round(totalAmount * 0.8),
+          hub_amount: Math.round(totalAmount * 0.2),
+        }
+      : undefined;
+
     serverLogger.info(
       { reqId, route: '/api/paystack/initialize', reference: demoRef, mode: 'demo' },
       'Payment initialized in demo mode'
@@ -309,6 +322,7 @@ app.post('/api/paystack/initialize', async (req: Request, res: Response) => {
         authorization_url: `${callback_url || '/'}${separator}paystack_callback=true&status=success&ref=${demoRef}`,
         access_code: 'demo_access_code',
         reference: demoRef,
+        split: splitData,
       },
     });
   }
@@ -340,7 +354,20 @@ app.post('/api/paystack/initialize', async (req: Request, res: Response) => {
       );
       return res.status(result.status).json(result.data);
     }
-    res.json(result.data);
+    const responseData = { ...result.data };
+    if (responseData.data && subaccount_code) {
+      const totalAmount = Number(amount) || 0;
+      responseData.data.split = responseData.data.split || {
+        subaccount: subaccount_code,
+        producer_share: 80,
+        hub_share: 20,
+        producer_share_percentage: 80,
+        platform_share_percentage: 20,
+        producer_amount: Math.round(totalAmount * 0.8),
+        hub_amount: Math.round(totalAmount * 0.2),
+      };
+    }
+    res.json(responseData);
   } catch (err: any) {
     serverLogger.error(
       { reqId, route: '/api/paystack/initialize', error: err.message },
@@ -364,19 +391,28 @@ app.get('/api/paystack/verify/:reference', async (req: Request, res: Response) =
     return res.status(400).json({ status: false, message: 'Transaction reference is required.' });
   }
 
-  if (!secretKey || reference.startsWith('demo_ref_') || reference.startsWith('pstk_')) {
+  if (!secretKey || reference.startsWith('demo_ref_')) {
     serverLogger.info(
       { reqId, route: '/api/paystack/verify/:reference', reference, mode: 'demo' },
       'Payment verified in demo mode'
     );
+    const defaultAmount = 10000;
     return res.json({
       status: true,
       message: 'Verification successful (DEMO MODE)',
       data: {
         status: 'success',
         reference,
-        amount: 10000,
+        amount: defaultAmount,
         currency: 'GHS',
+        split: {
+          producer_share: 80,
+          hub_share: 20,
+          producer_share_percentage: 80,
+          platform_share_percentage: 20,
+          producer_amount: Math.round(defaultAmount * 0.8),
+          hub_amount: Math.round(defaultAmount * 0.2),
+        },
       },
     });
   }
@@ -397,7 +433,19 @@ app.get('/api/paystack/verify/:reference', async (req: Request, res: Response) =
       );
       return res.status(result.status).json(result.data);
     }
-    res.json(result.data);
+    const responseData = { ...result.data };
+    if (responseData.data) {
+      const verifiedAmount = responseData.data.amount || 0;
+      responseData.data.split = responseData.data.split || {
+        producer_share: 80,
+        hub_share: 20,
+        producer_share_percentage: 80,
+        platform_share_percentage: 20,
+        producer_amount: Math.round(verifiedAmount * 0.8),
+        hub_amount: Math.round(verifiedAmount * 0.2),
+      };
+    }
+    res.json(responseData);
   } catch (err: any) {
     serverLogger.error(
       {

@@ -4,8 +4,19 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 5
+      day: "monday"
+      time: "06:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 10
     reviewers:
       - "lordnana1985"
     commit-message:
       prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "javascript"
+    groups:
+      runtime-dependencies:
+        dependency-type: "production"
+      development-dependencies:
+        dependency-type: "development"

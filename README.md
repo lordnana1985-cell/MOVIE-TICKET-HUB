@@ -75,6 +75,34 @@ An enterprise-grade African cinema, stage play, and live event ticketing platfor
 
 ---
 
+## 📡 Cross-Tab Event Contract (`mt_hub_tickets_changed`)
+
+To decouple stateful components from direct database polling while maintaining zero-latency reactive synchronization across browser tabs, the platform employs an explicit event bus contract:
+
+### Contract Specification
+- **Event Identifier**: `mt_hub_tickets_changed`
+- **Payload**: `{ type: 'mt_hub_tickets_changed', timestamp: number }`
+- **Transport Mechanics**:
+  1. **In-Tab**: Dispatched via standard DOM custom event: `window.dispatchEvent(new CustomEvent('mt_hub_tickets_changed'))`.
+  2. **Cross-Tab (Modern)**: Transmitted through the `BroadcastChannel` API (`mt_hub_channel`), broadcasting mutation notices across all open tabs instantaneously.
+  3. **Cross-Tab (Fallback)**: When `BroadcastChannel` is unavailable, writes a heartbeat key to `localStorage` (`mt_hub_tickets_changed_ts`), which fires the browser native `storage` event in adjacent tabs.
+
+### Publishers (State Mutation Points)
+| Action | Initiating Function | Target Effect |
+|---|---|---|
+| Ticket Created | `db.createTicket()` | Appends new event to marketplace catalog and producer inventory |
+| Ticket Updated | `db.updateTicket()` | Synchronizes price, dates, or capacity changes across all views |
+| Ticket Deleted | `db.deleteTicket()` | Evicts archived event from public catalog |
+| Ticket Purchased | `db.recordPurchase()` | Decrements remaining seat quota and increments producer revenue |
+| Gate Admission | `db.markTicketAsUsed()` | Flags digital pass as redeemed to prevent double-entry fraud |
+
+### Subscribers
+- **`App.tsx`**: Triggers atomic refresh of ticket collection and pass wallet counts.
+- **`Marketplace.tsx`**: Recomputes live remaining inventory badges and disables sold-out checkout buttons.
+- **`ProducerDashboard.tsx`**: Updates gross ticket sales, platform commission deduction (20%), and net producer payout balance (80%).
+
+---
+
 ## 💳 Data Flow & 80/20 Payment Split Architecture
 
 The platform implements an automated split-payment workflow using Paystack Subaccounts:
@@ -244,6 +272,28 @@ The persistence layer (`src/lib/db/`) uses a **dual-engine architecture**:
 1. **Supabase Cloud Database**: Stores event tickets, customer profiles, subaccount records, and purchases with full PostgreSQL relational integrity.
 2. **Transparent LocalStorage Cache**: Automatically caches records locally. If network connectivity drops or Supabase credentials are not configured, queries gracefully fall back to local storage without throwing unhandled exceptions.
 3. **Structured Errors (`DbError`)**: All database operations catch and wrap failures into typed `DbError` objects containing operation tags, table names, and fallback flags.
+
+### 📡 Cross-Tab & Inter-Component Sync Contract (`mt_hub_tickets_changed`)
+
+To guarantee instant seat count updates, balance adjustments, and admission synchronization without full page reloads, the platform implements a dual-transport event broadcast pattern:
+
+- **Local Window Event (`window.dispatchEvent`)**:
+  - **Event Name**: `mt_hub_tickets_changed`
+  - **Type**: Standard `CustomEvent` dispatched on `window`
+  - **Trigger**: Fired by `notifyTicketsChanged()` (`src/lib/db/client.ts`) following successful ticket creation, purchase, inventory modification, or ticket deletion.
+  - **Consumers**: `Marketplace.tsx`, `ProducerDashboard.tsx`, `GateScanner.tsx`, and `AdminPortal.tsx` listen via `window.addEventListener('mt_hub_tickets_changed', callback)` to invalidate their local caches and refetch current state.
+
+- **Cross-Tab Synchronization (`BroadcastChannel`)**:
+  - **Channel Name**: `'mt_hub_events'`
+  - **Message Shape**:
+    ```typescript
+    {
+      type: 'tickets_changed',
+      timestamp: number
+    }
+    ```
+  - **Behavior**: Enables multi-window or multi-tab coordination (e.g., ticket purchased in tab 1 immediately decrements inventory visible in tab 2).
+  - **Graceful Degradation**: Handled inside try/catch blocks; environments without `BroadcastChannel` support fallback seamlessly to single-window `CustomEvent` dispatch.
 
 ---
 

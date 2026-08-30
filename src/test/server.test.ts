@@ -74,11 +74,116 @@ describe('Server API Endpoints & Zod Validation', () => {
     expect(validRes.body.data).toHaveProperty('reference');
   });
 
-  it('GET /api/paystack/verify/:reference handles verification', async () => {
+  it('POST /api/paystack/initialize with subaccount code returns 80/20 split breakdown in demo mode', async () => {
+    const res = await request(app).post('/api/paystack/initialize').send({
+      email: 'buyer@example.com',
+      amount: 200,
+      subaccount_code: 'ACCT_PRODUCER_123',
+      callback_url: 'https://movietickethub.app/callback',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe(true);
+    expect(res.body.data.split).toBeDefined();
+    expect(res.body.data.split.subaccount).toBe('ACCT_PRODUCER_123');
+    expect(res.body.data.split.producer_share).toBe(80);
+    expect(res.body.data.split.hub_share).toBe(20);
+    expect(res.body.data.split.producer_amount).toBe(160);
+    expect(res.body.data.split.hub_amount).toBe(40);
+  });
+
+  it('POST /api/paystack/initialize with live mocked Paystack client returns 80/20 split fields', async () => {
+    process.env.PAYSTACK_SECRET_KEY = 'sk_live_mock_secret_key_12345';
+    const originalFetch = global.fetch;
+    global.fetch = async (url: any, _opts: any) => {
+      if (url.toString().includes('/transaction/initialize')) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () =>
+            JSON.stringify({
+              status: true,
+              message: 'Authorization URL created',
+              data: {
+                authorization_url: 'https://checkout.paystack.com/live_test_code',
+                access_code: 'live_test_code',
+                reference: 'ref_live_test_001',
+              },
+            }),
+        } as any;
+      }
+      return { ok: true, status: 200, text: async () => '{}' } as any;
+    };
+
+    const res = await request(app).post('/api/paystack/initialize').send({
+      email: 'patron@cinema.com',
+      amount: 100,
+      subaccount_code: 'ACCT_AFRICAN_TALES_99',
+      callback_url: 'https://movietickethub.app/callback',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe(true);
+    expect(res.body.data.reference).toBe('ref_live_test_001');
+    expect(res.body.data.split).toBeDefined();
+    expect(res.body.data.split.subaccount).toBe('ACCT_AFRICAN_TALES_99');
+    expect(res.body.data.split.producer_share).toBe(80);
+    expect(res.body.data.split.hub_share).toBe(20);
+    expect(res.body.data.split.producer_amount).toBe(80);
+    expect(res.body.data.split.hub_amount).toBe(20);
+
+    global.fetch = originalFetch;
+  });
+
+  it('GET /api/paystack/verify/:reference handles verification and asserts 80/20 split in demo mode', async () => {
     const res = await request(app).get('/api/paystack/verify/demo_ref_xyz123');
     expect(res.status).toBe(200);
     expect(res.body.status).toBe(true);
     expect(res.body.data.status).toBe('success');
+    expect(res.body.data.split).toBeDefined();
+    expect(res.body.data.split.producer_share).toBe(80);
+    expect(res.body.data.split.hub_share).toBe(20);
+    expect(res.body.data.split.producer_amount).toBe(8000);
+    expect(res.body.data.split.hub_amount).toBe(2000);
+  });
+
+  it('GET /api/paystack/verify/:reference with live mocked Paystack client asserts 80/20 split fields', async () => {
+    process.env.PAYSTACK_SECRET_KEY = 'sk_live_mock_secret_key_12345';
+    const originalFetch = global.fetch;
+    global.fetch = async (url: any) => {
+      if (url.toString().includes('/transaction/verify/')) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () =>
+            JSON.stringify({
+              status: true,
+              message: 'Verification successful',
+              data: {
+                status: 'success',
+                reference: 'pstk_live_verif_9988',
+                amount: 50000,
+                currency: 'GHS',
+                customer: { email: 'patron@cinema.com' },
+              },
+            }),
+        } as any;
+      }
+      return { ok: true, status: 200, text: async () => '{}' } as any;
+    };
+
+    const res = await request(app).get('/api/paystack/verify/pstk_live_verif_9988');
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe(true);
+    expect(res.body.data.status).toBe('success');
+    expect(res.body.data.reference).toBe('pstk_live_verif_9988');
+    expect(res.body.data.split).toBeDefined();
+    expect(res.body.data.split.producer_share).toBe(80);
+    expect(res.body.data.split.hub_share).toBe(20);
+    expect(res.body.data.split.producer_amount).toBe(40000);
+    expect(res.body.data.split.hub_amount).toBe(10000);
+
+    global.fetch = originalFetch;
   });
 
   it('POST /api/send-verification-code validates payload', async () => {

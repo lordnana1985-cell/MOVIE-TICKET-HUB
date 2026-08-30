@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Database Producer Subaccount Extraction (`src/lib/db/producer.ts`)**:
+  - Extracted subaccount registration and Paystack proxy communication out of `ProducerDashboard.tsx` into standalone data module `src/lib/db/producer.ts`.
+  - Paired with unit test suite `src/lib/db/producer.test.ts` asserting success, network error resilience, and profile commits.
+- **Deep Supabase / LocalStorage Hybrid Fallback Integration Testing (`src/lib/db/profiles.test.ts`)**:
+  - Added test coverage for `registerUser`, `loginUser`, and `updateUserProfile` under simulated Supabase service failure and LocalStorage fallback.
+  - Asserted returned profile properties (`id`, `email`, `role`, `companyName`, `balance`).
+- **Server Split-Payment Integration Tests (`src/test/server.test.ts`)**:
+  - Added Supertest test suite exercising `/api/paystack/initialize` and `/api/paystack/verify/:reference` with both demo mode and mocked live Paystack client.
+  - Asserted exact 80/20 revenue split breakdown (`producer_share: 80, hub_share: 20`, `producer_amount`, `hub_amount`).
+- **Lightweight Error Tracking & Telemetry Hook (`src/lib/logger.ts`)**:
+  - Added `logger.onError()` callback registry and automated HTTP error payload forwarding to remote telemetry endpoints or Sentry DSN.
+  - Added test coverage in `src/lib/logger.test.ts` verifying safe execution and non-blocking swallow of network transport failures.
+  - Declared `IS_TEST_ENV`, `ERROR_TRACKING_ENDPOINT`, and `VITE_ERROR_TRACKING_ENDPOINT` in `.env.example`.
+- **Event Contract Documentation (`README.md`)**:
+  - Documented `mt_hub_tickets_changed` custom event and `mt_hub_events` BroadcastChannel contract for real-time inter-component and cross-tab synchronization.
+- **Dependency Staleness & Cadence CI Pipeline**:
+  - Added non-blocking informational `npm outdated` step and separate job to `.github/workflows/ci.yml`.
+  - Configured weekly dependency groupings in `.github/dependabot.yml` covering runtime and development ecosystems.
 - **Server Structured Logging & Observability (`server.ts`)**:
   - Integrated `pino` high-performance structured JSON logger with ISO timestamping and route metadata across all Paystack endpoints.
   - Added request ID tracking middleware (`x-request-id` header injection and propagation).

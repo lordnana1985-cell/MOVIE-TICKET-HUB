@@ -110,30 +110,16 @@ export default function ProducerDashboard({
     setIsSubmittingSubaccount(true);
 
     try {
-      const res = await fetch('/api/paystack/subaccount', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          business_name: setupBusinessName,
-          settlement_bank: setupBankCode,
-          account_number: setupAccountNumber,
-          primary_contact_email: user.email,
-        }),
+      const result = await db.registerProducerSubaccount(user.id, {
+        businessName: setupBusinessName,
+        settlementBank: setupBankCode,
+        accountNumber: setupAccountNumber,
+        primaryContactEmail: user.email,
       });
 
-      const result = await res.json();
-
-      if (result.status && result.data?.subaccount_code) {
-        const code = result.data.subaccount_code;
-        await db.updateUserProfile(user.id, {
-          paystackSubaccountCode: code,
-          settlementBank: setupBankCode,
-          accountNumber: setupAccountNumber,
-          businessName: setupBusinessName,
-        });
-
-        setBankSubaccount(code);
-        setSubaccountSuccess(`Subaccount registered successfully: ${code}`);
+      if (result.success && result.subaccountCode) {
+        setBankSubaccount(result.subaccountCode);
+        setSubaccountSuccess(`Subaccount registered successfully: ${result.subaccountCode}`);
         setIsEditingSubaccount(false);
         onTicketCreated();
       } else {
