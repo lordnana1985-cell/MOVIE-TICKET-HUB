@@ -125,8 +125,9 @@ export default function ProducerDashboard({
       } else {
         setSubaccountError(result.message || 'Failed to create subaccount.');
       }
-    } catch (err: any) {
-      setSubaccountError(err.message || 'Network error.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Network error.';
+      setSubaccountError(message);
     } finally {
       setIsSubmittingSubaccount(false);
     }
@@ -157,7 +158,7 @@ export default function ProducerDashboard({
             setIsEditingSubaccount(false);
             onTicketCreated();
           }
-        } catch (err) {
+        } catch (err: unknown) {
           logger.error(
             'Failed to auto-generate default demo subaccount for producer',
             'ProducerDashboard',
@@ -180,9 +181,10 @@ export default function ProducerDashboard({
       setTicketToDelete(null);
       await loadProducerData();
       onTicketCreated();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to delete event ticket.';
       logger.error('Failed to delete ticket', 'ProducerDashboard', err);
-      setError(err?.message || 'Failed to delete event ticket.');
+      setError(message);
       await loadProducerData();
     } finally {
       setIsDeleting(null);
@@ -199,9 +201,10 @@ export default function ProducerDashboard({
       setShowClearAllConfirm(false);
       await loadProducerData();
       onTicketCreated();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to clear event tickets.';
       logger.error('Failed to clear tickets', 'ProducerDashboard', err);
-      setError(err?.message || 'Failed to clear event tickets.');
+      setError(message);
     } finally {
       setIsClearingAll(false);
     }

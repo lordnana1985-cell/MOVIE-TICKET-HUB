@@ -92,8 +92,9 @@ export function useAuthForm({ initialRole, onAuthSuccess, selectedBankCode }: Us
         setError(res.message);
         setResendCooldown(30);
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to resend verification link.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to resend verification link.';
+      setError(message);
       setResendCooldown(30);
     } finally {
       setResending(false);
@@ -124,11 +125,12 @@ export function useAuthForm({ initialRole, onAuthSuccess, selectedBankCode }: Us
           if (resetError) throw resetError;
           setSuccess('A secure password reset link has been dispatched to your email inbox!');
           setLoading(false);
-        } catch (err: any) {
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : 'Could not send password reset link.';
           logger.warn('Password reset request error', 'AuthPage', {
-            error: err?.message || err,
+            error: message,
           });
-          setError(err.message || 'Could not send password reset link.');
+          setError(message);
           setLoading(false);
         }
       } else {
@@ -173,8 +175,9 @@ export function useAuthForm({ initialRole, onAuthSuccess, selectedBankCode }: Us
           setNewPassword('');
           setConfirmPassword('');
         }, 2000);
-      } catch (err: any) {
-        setError(err.message || 'Failed to update password.');
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Failed to update password.';
+        setError(message);
         setLoading(false);
       }
     },
@@ -225,9 +228,10 @@ export function useAuthForm({ initialRole, onAuthSuccess, selectedBankCode }: Us
                 },
               });
               if (!signUpError) userAuth = data?.user;
-            } catch (signUpExc: any) {
+            } catch (signUpExc: unknown) {
+              const msg = signUpExc instanceof Error ? signUpExc.message : String(signUpExc);
               logger.warn('Supabase signUp note', 'AuthPage', {
-                error: signUpExc?.message || signUpExc,
+                error: msg,
               });
             }
           }
@@ -266,7 +270,8 @@ export function useAuthForm({ initialRole, onAuthSuccess, selectedBankCode }: Us
               if (signInError) {
                 const users = JSON.parse(localStorage.getItem('mt_hub_users') || '[]');
                 const foundLocally = users.find(
-                  (u: any) => u.email.toLowerCase() === email.trim().toLowerCase()
+                  (u: { email: string; password?: string }) =>
+                    u.email.toLowerCase() === email.trim().toLowerCase()
                 );
                 if (
                   !foundLocally ||
@@ -306,8 +311,9 @@ export function useAuthForm({ initialRole, onAuthSuccess, selectedBankCode }: Us
             onAuthSuccess(profile!);
           }, 800);
         }
-      } catch (err: any) {
-        setError(err.message || 'Authentication failed.');
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Authentication failed.';
+        setError(message);
       } finally {
         setLoading(false);
       }

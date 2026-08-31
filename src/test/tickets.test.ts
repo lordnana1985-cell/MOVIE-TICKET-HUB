@@ -59,4 +59,44 @@ describe('tickets db module', () => {
     const allTickets = await getTickets();
     expect(allTickets.length).toBe(0);
   });
+
+  it('falls back to LocalStorage when Supabase operations fail during registerUser and loginUser', async () => {
+    const { registerUser, loginUser, getUserProfile } = await import('../lib/db/profiles');
+    const supabaseModule = await import('../lib/db/profiles.supabase');
+
+    // Simulate Supabase failure on insert
+    const insertSpy = vi
+      .spyOn(supabaseModule, 'supabaseInsertProfile')
+      .mockRejectedValue(new Error('Postgres connection timeout'));
+
+    // Register user while Supabase is failing
+    const registered = await registerUser({
+      id: 'fallback-user-001',
+      email: 'fallback@movieticket.com',
+      name: 'Fallback Tester',
+      role: 'buyer',
+    });
+
+    expect(registered.id).toBe('fallback-user-001');
+    expect(registered.email).toBe('fallback@movieticket.com');
+
+    // Verify user is saved in LocalStorage fallback
+    const localProfile = await getUserProfile('fallback-user-001');
+    expect(localProfile).toBeDefined();
+    expect(localProfile?.email).toBe('fallback@movieticket.com');
+
+    // Simulate Supabase failure on login
+    const loginSpy = vi
+      .spyOn(supabaseModule, 'supabaseLoginProfile')
+      .mockRejectedValue(new Error('Database offline'));
+
+    // Login user while Supabase is failing
+    const loggedIn = await loginUser('fallback@movieticket.com', 'buyer');
+    expect(loggedIn).toBeDefined();
+    expect(loggedIn?.id).toBe('fallback-user-001');
+    expect(loggedIn?.name).toBe('Fallback Tester');
+
+    insertSpy.mockRestore();
+    loginSpy.mockRestore();
+  });
 });
