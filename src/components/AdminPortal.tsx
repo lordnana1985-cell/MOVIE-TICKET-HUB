@@ -65,8 +65,9 @@ export default function AdminPortal({
 
       const allTickets = await db.getTickets();
       setTickets(allTickets);
-    } catch (err: any) {
-      logger.error('Failed to load admin data:', 'AdminPortal', { error: err?.message || err });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      logger.error('Failed to load admin data:', 'AdminPortal', { error: message });
       reportNotice(
         'Failed to fetch admin dashboard records. Please check database connection.',
         'error'
@@ -97,8 +98,9 @@ export default function AdminPortal({
       } else {
         throw new Error('Ticket deletion failed.');
       }
-    } catch (err: any) {
-      reportNotice(err?.message || 'Failed to delete ticket.', 'error');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to delete ticket.';
+      reportNotice(message, 'error');
       await loadAdminData();
     } finally {
       setActionLoading(false);
@@ -128,8 +130,9 @@ export default function AdminPortal({
       } else {
         throw new Error('Account deletion failed.');
       }
-    } catch (err: any) {
-      reportNotice(err?.message || 'Failed to remove account.', 'error');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to remove account.';
+      reportNotice(message, 'error');
       await loadAdminData();
     } finally {
       setActionLoading(false);
