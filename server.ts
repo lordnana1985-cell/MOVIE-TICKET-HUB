@@ -14,13 +14,7 @@ import {
 
 // Re-export for compatibility with server imports and unit tests
 export type { AugmentedRequest };
-export {
-  serverLogger,
-  getSupabaseServerStatus,
-  getPaystackSecretKey,
-  paystackFetch,
-  sentryDsn,
-};
+export { serverLogger, getSupabaseServerStatus, getPaystackSecretKey, paystackFetch, sentryDsn };
 
 // Load environment variables from .env file
 dotenv.config();

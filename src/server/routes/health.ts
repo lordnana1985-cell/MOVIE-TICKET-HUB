@@ -1,5 +1,11 @@
 import { Router, Response } from 'express';
-import { serverLogger, getPaystackSecretKey, getSupabaseServerStatus, sentryDsn, AugmentedRequest } from '../types.js';
+import {
+  serverLogger,
+  getPaystackSecretKey,
+  getSupabaseServerStatus,
+  sentryDsn,
+  AugmentedRequest,
+} from '../types.js';
 
 export const healthRouter = Router();
 

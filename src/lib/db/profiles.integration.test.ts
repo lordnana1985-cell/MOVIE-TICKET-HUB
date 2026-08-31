@@ -37,14 +37,12 @@ describe('Profiles & Payment Integration Tests', () => {
       },
     });
 
-    const initRes = await request(app)
-      .post('/api/paystack/initialize')
-      .send({
-        email: 'buyer@example.com',
-        amount: 150,
-        subaccount_code: 'ACCT_PROD_123',
-        callback_url: 'https://movieticket.app/callback',
-      });
+    const initRes = await request(app).post('/api/paystack/initialize').send({
+      email: 'buyer@example.com',
+      amount: 150,
+      subaccount_code: 'ACCT_PROD_123',
+      callback_url: 'https://movieticket.app/callback',
+    });
 
     expect(initRes.status).toBe(200);
     expect(initRes.body.status).toBe(true);

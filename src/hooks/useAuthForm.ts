@@ -126,7 +126,8 @@ export function useAuthForm({ initialRole, onAuthSuccess, selectedBankCode }: Us
           setSuccess('A secure password reset link has been dispatched to your email inbox!');
           setLoading(false);
         } catch (err: unknown) {
-          const message = err instanceof Error ? err.message : 'Could not send password reset link.';
+          const message =
+            err instanceof Error ? err.message : 'Could not send password reset link.';
           logger.warn('Password reset request error', 'AuthPage', {
             error: message,
           });
